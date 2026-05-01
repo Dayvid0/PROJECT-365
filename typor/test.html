@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Automator Test Page</title>
+    <style>
+    <!-- TinyMCE CDN for demo (remove if already loaded elsewhere) -->
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #666;
+            margin-top: 0;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .no-paste {
+            background: #fffbf0;
+            border: 1px solid #ffcc00;
+        }
+        .contenteditable {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 100px;
+            background: white;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Typing Automator Extension Test Page</h1>
+
+    <!-- Inject Clipboard Button for TinyMCE demo -->
+    <div style="margin: 16px 0;">
+        <button id="injectClipboardBtn">Inject Clipboard</button>
+        <button onclick="addTextToEditor('Hello from programmatic injection!')">Inject Custom Text</button>
+    </div>
+
+    <!-- TinyMCE Editor for testing -->
+    <textarea id="editor-id">This is a TinyMCE editor. Try right-clicking for the Inject Clipboard option!</textarea>
+    
+    <div class="test-section">
+        <h2>Regular Input Field</h2>
+        <input type="text" placeholder="Click here and the extension will type..." />
+    </div>
+
+    <div class="test-section">
+        <h2>Textarea</h2>
+        <textarea placeholder="Multi-line text will be typed here..."></textarea>
+    </div>
+
+    <div class="test-section">
+        <h2>Input with Paste Disabled</h2>
+        <div class="info">This input field has paste disabled - perfect for testing the extension!</div>
+        <input type="text" 
+               class="no-paste" 
+               placeholder="Paste is disabled here - use the extension to type!"
+               onpaste="return false;" />
+    </div>
+
+    <div class="test-section">
+        <h2>Textarea with Paste Disabled</h2>
+        <textarea class="no-paste" 
+                  placeholder="Paste is disabled in this textarea too..."
+                  onpaste="return false;"></textarea>
+    </div>
+
+    <div class="test-section">
+        <h2>ContentEditable Div</h2>
+        <div contenteditable="true" class="contenteditable">
+            Click here to edit this content...
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>ContentEditable with Paste Disabled</h2>
+        <div contenteditable="true" 
+             class="contenteditable no-paste"
+             onpaste="return false;">
+            Paste is disabled here too - use the extension!
+        </div>
+    </div>
+
+    <script>
+        // Initialize TinyMCE for demo/testing
+        tinymce.init({
+                selector: '#editor-id',
+                height: 200,
+                menubar: false,
+                plugins: 'lists link',
+                toolbar: 'undo redo | bold italic underline | bullist numlist | link',
+                contextmenu: false // We'll add our own context menu
+        });
+
+        // === Inject Clipboard Button for TinyMCE ===
+        // 1. Replace 'editor-id' with your TinyMCE editor's ID
+        const TINYMCE_EDITOR_ID = 'editor-id';
+
+        // 2. Function to inject arbitrary text into the editor
+        function addTextToEditor(text) {
+            // Get the TinyMCE editor instance
+            const editor = tinymce.get(TINYMCE_EDITOR_ID);
+            if (!editor) {
+                alert('TinyMCE editor not found!');
+                return;
+            }
+            // Insert text at the current cursor position, bypassing paste restrictions
+            editor.insertContent(text);
+        }
+
+        // 3. Function to read clipboard and inject into the editor
+        async function injectClipboardToEditor() {
+            try {
+                // Read clipboard text (requires user gesture and permissions)
+                const clipboardText = await navigator.clipboard.readText();
+                if (!clipboardText) {
+                    alert('Clipboard is empty or unavailable.');
+                    return;
+                }
+                addTextToEditor(clipboardText);
+            } catch (err) {
+                // Handle clipboard access errors
+                alert('Failed to read clipboard: ' + (err.message || err));
+            }
+        }
+
+        // 4. Add event listener to the Inject Clipboard button
+        document.addEventListener('DOMContentLoaded', function () {
+            const btn = document.getElementById('injectClipboardBtn');
+            if (!btn) return;
+            btn.addEventListener('click', injectClipboardToEditor);
+        });
+
+        // 5. Add context menu (right-click) support inside the editor
+        document.addEventListener('DOMContentLoaded', function () {
+            const tryAddContextMenu = () => {
+                const editor = tinymce.get(TINYMCE_EDITOR_ID);
+                if (!editor) return;
+                editor.on('init', function () {
+                    // Add a custom context menu item
+                    editor.ui.registry.addMenuItem('injectClipboard', {
+                        text: 'Inject Clipboard',
+                        onAction: injectClipboardToEditor
+                    });
+                    // Add the item to the editor's context menu
+                    editor.ui.registry.addContextMenu('injectClipboardMenu', {
+                        update: function () {
+                            return ['injectClipboard'];
+                        }
+                    });
+                    // Register the context menu for editable area
+                    editor.on('contextmenu', function (e) {
+                        editor.ui.showContextMenu('injectClipboardMenu', e.clientX, e.clientY);
+                    });
+                });
+            };
+            // TinyMCE may not be ready immediately
+            if (window.tinymce && tinymce.get(TINYMCE_EDITOR_ID)) {
+                tryAddContextMenu();
+            } else {
+                setTimeout(tryAddContextMenu, 500);
+            }
+        });
+        // Log typing events for debugging
+        document.addEventListener('input', function(e) {
+            console.log('Input event:', e.target.value || e.target.textContent);
+        });
+        
+        // Show paste attempt alerts
+        document.querySelectorAll('.no-paste').forEach(element => {
+            element.addEventListener('paste', function(e) {
+                e.preventDefault();
+                alert('Paste is disabled on this field! Use the Typing Automator extension to type text.');
+                return false;
+            });
+        });
+        // ...existing code...
+    </script>
+</body>
+</html>
