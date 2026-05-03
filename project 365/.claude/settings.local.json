@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,':',v\\) for k,v in d.get\\('exports',{}\\).items\\(\\) if 'rn' in k.lower\\(\\) or 'native' in k.lower\\(\\) or 'react' in k.lower\\(\\)]\")"
+    ]
+  }
+}
