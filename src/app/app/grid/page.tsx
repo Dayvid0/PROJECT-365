@@ -28,7 +28,7 @@ const LEGEND = [
 export default function GridPage() {
   const userId = useWorkspaceUserId();
   const [month, setMonth] = useState(() => toMonthString(new Date()));
-  const { habits, isLoading, isError, refetch } = useHabits(userId);
+  const { habits, schedules, exceptions, isLoading, isError, refetch } = useHabits(userId);
   const { logs, isError: logsError, refetch: refetchLogs } = useLogs(userId, month);
   const upsertLogs = useUpsertLogs(userId);
 
@@ -81,7 +81,14 @@ export default function GridPage() {
         </Card>
       ) : (
         <>
-          <HabitGridTable month={month} habits={activeHabits} logs={logs} onCellTap={handleCellTap} />
+          <HabitGridTable
+            month={month}
+            habits={activeHabits}
+            logs={logs}
+            schedules={schedules}
+            exceptions={exceptions}
+            onCellTap={handleCellTap}
+          />
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
             {LEGEND.map((item) => (
               <span key={item.label} className="inline-flex items-center gap-1.5">

@@ -83,6 +83,7 @@ export default function HabitsPage() {
           color: form.color,
           order: habits.length,
           isActive: true,
+          kind: "check_in",
         });
       }
       setForm(null);

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   createHabitSchema,
+  createScheduleVersionSchema,
   dateSchema,
   monthSchema,
   preferencesPatchSchema,
+  scheduleExceptionSchema,
   statusSchema,
   upsertLogsSchema,
 } from "../validation";
@@ -59,5 +61,39 @@ describe("HTTP input validation", () => {
   it("requires at least one preference change", () => {
     expect(preferencesPatchSchema.safeParse({}).success).toBe(false);
     expect(preferencesPatchSchema.safeParse({ theme: "dark" }).success).toBe(true);
+  });
+
+  it("validates schedule versions and timezones", () => {
+    expect(
+      createScheduleVersionSchema.safeParse({
+        effectiveFrom: "2026-01-01",
+        cadence: "weekly",
+        weekdays: [1, 3, 5],
+        timezone: "Africa/Kampala",
+      }).success
+    ).toBe(true);
+    expect(
+      createScheduleVersionSchema.safeParse({
+        effectiveFrom: "2026-01-01",
+        cadence: "weekly",
+      }).success
+    ).toBe(false);
+    expect(
+      createScheduleVersionSchema.safeParse({
+        effectiveFrom: "2026-01-01",
+        cadence: "interval",
+        timezone: "Mars/Olympus",
+      }).success
+    ).toBe(false);
+  });
+
+  it("rejects inverted planned breaks", () => {
+    expect(
+      scheduleExceptionSchema.safeParse({
+        startDate: "2026-01-10",
+        endDate: "2026-01-01",
+        kind: "planned_break",
+      }).success
+    ).toBe(false);
   });
 });

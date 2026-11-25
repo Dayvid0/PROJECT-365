@@ -1,31 +1,45 @@
-import { and, eq, gte, inArray, lte, max, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lte, max, sql } from "drizzle-orm";
 import { ulid } from "ulidx";
+import { resolveStatus, buildMonthlySnapshot, toMonthString } from "@/domain/calculations";
+import {
+  addDays,
+  localDateForInstant,
+  scheduledOpportunitiesForRange,
+} from "@/domain/schedule";
 import { buildDefaultHabits } from "@/domain/defaults";
-import { buildMonthlySnapshot, toMonthString } from "@/domain/calculations";
 import type {
   AnalyticsRangeData,
   BootstrapData,
   Habit,
   HabitLog,
+  HabitSchedule,
   MonthlySnapshot,
+  ScheduleException,
+  ScheduledOpportunity,
   UserProfile,
 } from "@/domain/types";
 import type {
   CreateHabitInput,
+  CreateScheduleVersionInput,
   PreferencesPatchSchemaType,
   ProfilePatchInput,
+  ScheduleExceptionInput,
   UpdateHabitInput,
   UpsertLogsInput,
 } from "@/domain/validation";
 import { db, type DbExecutor } from "@/server/db";
 import {
   habitLogs,
+  habitScheduleExceptions,
+  habitScheduleVersions,
   habits,
   monthlySnapshots,
   userPreferences,
   users,
   type HabitLogRow,
   type HabitRow,
+  type HabitScheduleVersionRow,
+  type ScheduleExceptionRow,
 } from "@/server/db/schema";
 import { NotFoundError, ValidationError } from "./errors";
 
@@ -33,11 +47,16 @@ function toHabit(row: HabitRow): Habit {
   return {
     id: row.id,
     name: row.name,
+    description: row.description,
     category: row.category,
     order: row.position,
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
     color: row.color,
+    kind: row.kind,
+    targetValue: row.targetValue,
+    unit: row.unit,
+    targetDurationSeconds: row.targetDurationSeconds,
   };
 }
 
@@ -47,11 +66,55 @@ function toLog(row: HabitLogRow): HabitLog {
     date: row.date,
     status: row.status as HabitLog["status"],
     updatedAt: row.updatedAt.toISOString(),
+    occurrence: row.occurrence,
+    value: row.value,
+    unit: row.unit,
+    note: row.note,
+    source: row.source,
+    startedAt: row.startedAt?.toISOString() ?? null,
+    endedAt: row.endedAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+    editedAt: row.editedAt?.toISOString() ?? null,
   };
 }
 
-function logId(userId: string, habitId: string, date: string): string {
-  return `${userId}:${habitId}:${date}`;
+function toSchedule(row: HabitScheduleVersionRow): HabitSchedule {
+  return {
+    id: row.id,
+    habitId: row.habitId,
+    version: row.version,
+    effectiveFrom: row.effectiveFrom,
+    effectiveTo: row.effectiveTo,
+    cadence: row.cadence,
+    weekdays: row.weekdays ?? [],
+    timesPerWeek: row.timesPerWeek,
+    intervalDays: row.intervalDays,
+    monthDay: row.monthDay,
+    timesPerDay: row.timesPerDay,
+    targetValue: row.targetValue,
+    unit: row.unit,
+    targetDurationSeconds: row.targetDurationSeconds,
+    dayStartMinute: row.dayStartMinute,
+    timezone: row.timezone,
+    anchorDate: row.anchorDate,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function toException(row: ScheduleExceptionRow): ScheduleException {
+  return {
+    id: row.id,
+    habitId: row.habitId,
+    startDate: row.startDate,
+    endDate: row.endDate,
+    kind: row.kind,
+    reason: row.reason,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function logId(userId: string, habitId: string, date: string, occurrence: number): string {
+  return `${userId}:${habitId}:${date}:${occurrence}`;
 }
 
 async function ensurePreferences(userId: string, executor: DbExecutor = db): Promise<void> {
@@ -61,6 +124,15 @@ async function ensurePreferences(userId: string, executor: DbExecutor = db): Pro
     .onConflictDoNothing();
 }
 
+async function getUserTimezone(userId: string, executor: DbExecutor = db): Promise<string> {
+  const [user] = await executor
+    .select({ timezone: users.timezone })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return user?.timezone ?? "UTC";
+}
+
 async function listHabits(userId: string, executor: DbExecutor = db): Promise<Habit[]> {
   const rows = await executor
     .select()
@@ -68,6 +140,24 @@ async function listHabits(userId: string, executor: DbExecutor = db): Promise<Ha
     .where(eq(habits.userId, userId))
     .orderBy(habits.position, habits.createdAt);
   return rows.map(toHabit);
+}
+
+async function listSchedules(userId: string, executor: DbExecutor = db): Promise<HabitSchedule[]> {
+  const rows = await executor
+    .select()
+    .from(habitScheduleVersions)
+    .where(eq(habitScheduleVersions.userId, userId))
+    .orderBy(habitScheduleVersions.habitId, habitScheduleVersions.version);
+  return rows.map(toSchedule);
+}
+
+async function listExceptions(userId: string, executor: DbExecutor = db): Promise<ScheduleException[]> {
+  const rows = await executor
+    .select()
+    .from(habitScheduleExceptions)
+    .where(eq(habitScheduleExceptions.userId, userId))
+    .orderBy(habitScheduleExceptions.startDate);
+  return rows.map(toException);
 }
 
 async function listLogsForMonth(
@@ -101,6 +191,10 @@ async function deleteSnapshots(
     );
 }
 
+async function deleteAllSnapshots(userId: string, executor: DbExecutor = db): Promise<void> {
+  await executor.delete(monthlySnapshots).where(eq(monthlySnapshots.userId, userId));
+}
+
 async function getProfile(userId: string): Promise<UserProfile> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) throw new NotFoundError("Account not found.");
@@ -124,13 +218,141 @@ async function getProfile(userId: string): Promise<UserProfile> {
   };
 }
 
+interface ScheduleSeed {
+  cadence: CreateScheduleVersionInput["cadence"];
+  weekdays: number[];
+  timesPerWeek: number | null;
+  intervalDays: number | null;
+  monthDay: number | null;
+  timesPerDay: number;
+  targetValue: number | null;
+  unit: string | null;
+  targetDurationSeconds: number | null;
+  dayStartMinute: number;
+  timezone: string;
+  effectiveFrom: string;
+  anchorDate: string;
+}
+
+function buildScheduleValues(
+  userId: string,
+  habitId: string,
+  version: number,
+  seed: ScheduleSeed
+) {
+  return {
+    id: ulid(),
+    userId,
+    habitId,
+    version,
+    effectiveFrom: seed.effectiveFrom,
+    effectiveTo: null,
+    cadence: seed.cadence,
+    weekdays: seed.weekdays,
+    timesPerWeek: seed.timesPerWeek,
+    intervalDays: seed.intervalDays,
+    monthDay: seed.monthDay,
+    timesPerDay: seed.timesPerDay,
+    targetValue: seed.targetValue,
+    unit: seed.unit,
+    targetDurationSeconds: seed.targetDurationSeconds,
+    dayStartMinute: seed.dayStartMinute,
+    timezone: seed.timezone,
+    anchorDate: seed.anchorDate,
+    createdAt: new Date(),
+  };
+}
+
+function scheduleSeedFromInput(
+  input: CreateScheduleVersionInput | CreateHabitInput["schedule"],
+  habit: Pick<Habit, "kind" | "targetValue" | "unit" | "targetDurationSeconds">,
+  timezone: string,
+  fallbackDate: string
+): ScheduleSeed {
+  const seed = input as Partial<CreateScheduleVersionInput> | undefined;
+  return {
+    cadence: seed?.cadence ?? "daily",
+    weekdays: seed?.weekdays ?? [],
+    timesPerWeek: seed?.timesPerWeek ?? null,
+    intervalDays: seed?.intervalDays ?? null,
+    monthDay: seed?.monthDay ?? null,
+    timesPerDay: seed?.timesPerDay ?? 1,
+    targetValue: seed?.targetValue ?? habit.targetValue,
+    unit: seed?.unit ?? habit.unit,
+    targetDurationSeconds: seed?.targetDurationSeconds ?? habit.targetDurationSeconds,
+    dayStartMinute: seed?.dayStartMinute ?? 0,
+    timezone: seed?.timezone ?? timezone,
+    effectiveFrom: seed?.effectiveFrom ?? fallbackDate,
+    anchorDate: seed?.anchorDate ?? seed?.effectiveFrom ?? fallbackDate,
+  };
+}
+
+async function nextScheduleVersion(
+  userId: string,
+  habitId: string,
+  executor: DbExecutor = db
+): Promise<number> {
+  const [result] = await executor
+    .select({ value: max(habitScheduleVersions.version) })
+    .from(habitScheduleVersions)
+    .where(
+      and(eq(habitScheduleVersions.userId, userId), eq(habitScheduleVersions.habitId, habitId))
+    );
+  return (result?.value ?? 0) + 1;
+}
+
+async function insertScheduleVersion(
+  userId: string,
+  habit: Habit,
+  input: CreateScheduleVersionInput | CreateHabitInput["schedule"],
+  executor: DbExecutor = db
+): Promise<HabitSchedule> {
+  const timezone = await getUserTimezone(userId, executor);
+  const fallbackDate = localDateForInstant(new Date(), timezone, 0);
+  const seed = scheduleSeedFromInput(input, habit, timezone, fallbackDate);
+  const version = await nextScheduleVersion(userId, habit.id, executor);
+
+  await executor
+    .update(habitScheduleVersions)
+    .set({ effectiveTo: addDays(seed.effectiveFrom, -1) })
+    .where(
+      and(
+        eq(habitScheduleVersions.userId, userId),
+        eq(habitScheduleVersions.habitId, habit.id),
+        isNull(habitScheduleVersions.effectiveTo),
+        lte(habitScheduleVersions.effectiveFrom, seed.effectiveFrom)
+      )
+    );
+
+  const values = buildScheduleValues(userId, habit.id, version, seed);
+  await executor.insert(habitScheduleVersions).values(values);
+  return toSchedule({
+    ...values,
+    weekdays: values.weekdays,
+    createdAt: values.createdAt,
+  });
+}
+
 export const workspaceRepository = {
   getProfile,
   listHabits,
+  listSchedules,
+  listExceptions,
 
   async getBootstrap(userId: string): Promise<BootstrapData> {
-    const [user, habitList] = await Promise.all([getProfile(userId), listHabits(userId)]);
-    return { user, habits: habitList, pendingLogCount: 0 };
+    const [user, habitList, scheduleList, exceptionList] = await Promise.all([
+      getProfile(userId),
+      listHabits(userId),
+      listSchedules(userId),
+      listExceptions(userId),
+    ]);
+    return {
+      user,
+      habits: habitList,
+      schedules: scheduleList,
+      exceptions: exceptionList,
+      pendingLogCount: 0,
+    };
   },
 
   async createHabit(userId: string, input: CreateHabitInput): Promise<Habit> {
@@ -138,34 +360,113 @@ export const workspaceRepository = {
     const [result] = await db.insert(habits).values({
       userId,
       name: input.name,
+      description: input.description ?? null,
       category: input.category,
       color: input.color,
       position: input.order,
       isActive: input.isActive,
+      kind: input.kind,
+      targetValue: input.targetValue ?? null,
+      unit: input.unit ?? null,
+      targetDurationSeconds: input.targetDurationSeconds ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }).returning();
     if (!result) throw new Error("Habit insert returned no row.");
-    return toHabit(result);
+
+    const habit = toHabit(result);
+    await insertScheduleVersion(userId, habit, input.schedule);
+    return habit;
   },
 
   async updateHabit(userId: string, habitId: string, input: UpdateHabitInput): Promise<Habit> {
+    const [existing] = await db
+      .select()
+      .from(habits)
+      .where(and(eq(habits.id, habitId), eq(habits.userId, userId)))
+      .limit(1);
+    if (!existing) throw new NotFoundError("Habit not found.");
+
     const [result] = await db
       .update(habits)
       .set({
         ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.category !== undefined ? { category: input.category } : {}),
         ...(input.color !== undefined ? { color: input.color } : {}),
         ...(input.order !== undefined ? { position: input.order } : {}),
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        ...(input.kind !== undefined ? { kind: input.kind } : {}),
+        ...(input.targetValue !== undefined ? { targetValue: input.targetValue } : {}),
+        ...(input.unit !== undefined ? { unit: input.unit } : {}),
+        ...(input.targetDurationSeconds !== undefined
+          ? { targetDurationSeconds: input.targetDurationSeconds }
+          : {}),
         updatedAt: new Date(),
       })
       .where(and(eq(habits.id, habitId), eq(habits.userId, userId)))
       .returning();
     if (!result) throw new NotFoundError("Habit not found.");
 
-    await db.delete(monthlySnapshots).where(eq(monthlySnapshots.userId, userId));
+    if (input.schedule) {
+      await insertScheduleVersion(userId, toHabit(result), input.schedule);
+    }
+
+    await deleteAllSnapshots(userId);
     return toHabit(result);
+  },
+
+  async createScheduleVersion(
+    userId: string,
+    habitId: string,
+    input: CreateScheduleVersionInput
+  ): Promise<HabitSchedule> {
+    const habit = (await listHabits(userId)).find((candidate) => candidate.id === habitId);
+    if (!habit) throw new NotFoundError("Habit not found.");
+    const schedule = await insertScheduleVersion(userId, habit, input);
+    await deleteAllSnapshots(userId);
+    return schedule;
+  },
+
+  async createException(
+    userId: string,
+    habitId: string,
+    input: ScheduleExceptionInput
+  ): Promise<ScheduleException> {
+    const owned = await db
+      .select({ id: habits.id })
+      .from(habits)
+      .where(and(eq(habits.id, habitId), eq(habits.userId, userId)))
+      .limit(1);
+    if (!owned.length) throw new NotFoundError("Habit not found.");
+
+    const values = {
+      id: ulid(),
+      userId,
+      habitId,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      kind: input.kind,
+      reason: input.reason ?? null,
+      createdAt: new Date(),
+    };
+    await db.insert(habitScheduleExceptions).values(values);
+    await deleteAllSnapshots(userId);
+    return toException(values);
+  },
+
+  async deleteException(userId: string, exceptionId: string): Promise<void> {
+    const result = await db
+      .delete(habitScheduleExceptions)
+      .where(
+        and(
+          eq(habitScheduleExceptions.id, exceptionId),
+          eq(habitScheduleExceptions.userId, userId)
+        )
+      )
+      .returning({ id: habitScheduleExceptions.id });
+    if (!result.length) throw new NotFoundError("Exception not found.");
+    await deleteAllSnapshots(userId);
   },
 
   async listLogs(userId: string, month: string): Promise<HabitLog[]> {
@@ -174,29 +475,67 @@ export const workspaceRepository = {
 
   async upsertLogs(userId: string, logs: UpsertLogsInput): Promise<void> {
     const habitIds = [...new Set(logs.map((log) => log.habitId))];
-    const owned = await db
-      .select({ id: habits.id })
+    const ownedRows = await db
+      .select()
       .from(habits)
       .where(and(eq(habits.userId, userId), inArray(habits.id, habitIds)));
-    if (owned.length !== habitIds.length) {
+    if (ownedRows.length !== habitIds.length) {
       throw new ValidationError("One or more habits are not available for this account.");
     }
+    const owned = new Map(ownedRows.map((row) => [row.id, toHabit(row)]));
 
+    const ids = logs.map((log) =>
+      logId(userId, log.habitId, log.date, log.occurrence ?? 1)
+    );
+    const existingRows = ids.length
+      ? await db.select().from(habitLogs).where(inArray(habitLogs.id, ids))
+      : [];
+    const createdAtById = new Map(existingRows.map((row) => [row.id, row.createdAt]));
     const now = new Date();
+
     await db.insert(habitLogs).values(
-      logs.map((log) => ({
-        id: logId(userId, log.habitId, log.date),
-        userId,
-        habitId: log.habitId,
-        date: log.date,
-        status: log.status,
-        updatedAt: new Date(log.updatedAt || now.toISOString()),
-      }))
+      logs.map((log) => {
+        const id = logId(userId, log.habitId, log.date, log.occurrence ?? 1);
+        const habit = owned.get(log.habitId)!;
+        const previousCreatedAt = createdAtById.get(id);
+        return {
+          id,
+          userId,
+          habitId: log.habitId,
+          date: log.date,
+          status: resolveStatus(habit, log.status, log.value),
+          occurrence: log.occurrence ?? 1,
+          value: log.value ?? null,
+          unit: log.unit ?? null,
+          note: log.note ?? null,
+          source: log.source ?? "manual",
+          startedAt: log.startedAt ? new Date(log.startedAt) : null,
+          endedAt: log.endedAt ? new Date(log.endedAt) : null,
+          createdAt: log.createdAt ? new Date(log.createdAt) : (previousCreatedAt ?? now),
+          updatedAt: new Date(log.updatedAt || now.toISOString()),
+          editedAt: previousCreatedAt ? now : (log.editedAt ? new Date(log.editedAt) : null),
+          isSkip: false,
+          plannedBreak: false,
+        };
+      })
     ).onConflictDoUpdate({
-      target: habitLogs.id,
+      target: [
+        habitLogs.userId,
+        habitLogs.habitId,
+        habitLogs.date,
+        habitLogs.occurrence,
+      ],
       set: {
         status: sql`excluded.status`,
+        occurrence: sql`excluded.occurrence`,
+        value: sql`excluded.value`,
+        unit: sql`excluded.unit`,
+        note: sql`excluded.note`,
+        source: sql`excluded.source`,
+        startedAt: sql`excluded.started_at`,
+        endedAt: sql`excluded.ended_at`,
         updatedAt: sql`excluded.updated_at`,
+        editedAt: sql`excluded.edited_at`,
       },
     });
 
@@ -213,11 +552,19 @@ export const workspaceRepository = {
       .limit(1);
     if (existing) return JSON.parse(existing.payload) as MonthlySnapshot;
 
-    const [habitList, logs] = await Promise.all([
+    const [habitList, logs, scheduleList, exceptionList] = await Promise.all([
       listHabits(userId),
       listLogsForMonth(userId, month),
+      listSchedules(userId),
+      listExceptions(userId),
     ]);
-    const snapshot = buildMonthlySnapshot(month, habitList, logs);
+    const snapshot = buildMonthlySnapshot(
+      month,
+      habitList,
+      logs,
+      new Date(),
+      { schedules: scheduleList, exceptions: exceptionList }
+    );
     await db.insert(monthlySnapshots).values({
       userId,
       month,
@@ -232,7 +579,20 @@ export const workspaceRepository = {
   },
 
   async deleteAllSnapshots(userId: string): Promise<void> {
-    await db.delete(monthlySnapshots).where(eq(monthlySnapshots.userId, userId));
+    await deleteAllSnapshots(userId);
+  },
+
+  async getScheduledOpportunities(
+    userId: string,
+    start: string,
+    end: string
+  ): Promise<ScheduledOpportunity[]> {
+    return scheduledOpportunitiesForRange(
+      await listSchedules(userId),
+      await listExceptions(userId),
+      start,
+      end
+    );
   },
 
   async getAnalyticsRange(userId: string, months = 12): Promise<AnalyticsRangeData> {
@@ -252,7 +612,18 @@ export const workspaceRepository = {
           lte(habitLogs.date, end)
         )
       );
-    return { habits: await listHabits(userId), logs: rows.map(toLog), months: monthList };
+    const [habitList, scheduleList, exceptionList] = await Promise.all([
+      listHabits(userId),
+      listSchedules(userId),
+      listExceptions(userId),
+    ]);
+    return {
+      habits: habitList,
+      logs: rows.map(toLog),
+      schedules: scheduleList,
+      exceptions: exceptionList,
+      months: monthList,
+    };
   },
 
   async listAllLogs(userId: string): Promise<HabitLog[]> {
@@ -268,19 +639,45 @@ export const workspaceRepository = {
     const existing = await listHabits(userId);
     if (mode === "defaults" && !existing.some((habit) => habit.isActive)) {
       const now = new Date();
+      const timezone = await getUserTimezone(userId);
+      const effectiveFrom = localDateForInstant(now, timezone, 0);
       const defaults = buildDefaultHabits(() => ulid(), now);
       await db.insert(habits).values(
         defaults.map((habit) => ({
           id: habit.id,
           userId,
           name: habit.name,
+          description: habit.description,
           category: habit.category,
           color: habit.color,
           position: habit.order,
           isActive: true,
+          kind: habit.kind,
+          targetValue: habit.targetValue,
+          unit: habit.unit,
+          targetDurationSeconds: habit.targetDurationSeconds,
           createdAt: now,
           updatedAt: now,
         }))
+      );
+      await db.insert(habitScheduleVersions).values(
+        defaults.map((habit) =>
+          buildScheduleValues(userId, habit.id, 1, {
+            cadence: "daily",
+            weekdays: [],
+            timesPerWeek: null,
+            intervalDays: null,
+            monthDay: null,
+            timesPerDay: 1,
+            targetValue: habit.targetValue,
+            unit: habit.unit,
+            targetDurationSeconds: habit.targetDurationSeconds,
+            dayStartMinute: 0,
+            timezone,
+            effectiveFrom,
+            anchorDate: effectiveFrom,
+          })
+        )
       );
     }
     await db.update(userPreferences)

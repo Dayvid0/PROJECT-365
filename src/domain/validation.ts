@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { HABIT_CATEGORIES } from "@/lib/constants";
+import {
+  CADENCE_KINDS,
+  CHECKIN_SOURCES,
+  HABIT_CATEGORIES,
+  HABIT_KINDS,
+  SCHEDULE_EXCEPTION_KINDS,
+} from "@/lib/constants";
 
 export const monthSchema = z
   .string()
@@ -20,34 +26,130 @@ export const statusSchema = z.union([
 ]);
 
 export const categorySchema = z.enum(HABIT_CATEGORIES);
+export const habitKindSchema = z.enum(HABIT_KINDS);
+export const cadenceSchema = z.enum(CADENCE_KINDS);
+export const checkInSourceSchema = z.enum(CHECKIN_SOURCES);
+export const scheduleExceptionKindSchema = z.enum(SCHEDULE_EXCEPTION_KINDS);
 
 export const hexColorSchema = z
   .string()
   .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Colour must be a hex value.");
 
+export const timezoneSchema = z.string().min(1).max(120).refine((value) => {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}, "Timezone must be a valid IANA identifier.");
+
+export const weekdaysSchema = z
+  .array(z.number().int().min(0).max(6))
+  .max(7)
+  .refine((value) => new Set(value).size === value.length, "Weekdays must be unique.");
+
+const scheduleInputObject = z.object({
+  cadence: cadenceSchema.default("daily"),
+  weekdays: weekdaysSchema.default([]),
+  timesPerWeek: z.number().int().min(1).max(7).nullable().optional(),
+  intervalDays: z.number().int().min(1).max(3650).nullable().optional(),
+  monthDay: z.number().int().min(1).max(31).nullable().optional(),
+  timesPerDay: z.number().int().min(1).max(12).default(1),
+  targetValue: z.number().positive().nullable().optional(),
+  unit: z.string().trim().min(1).max(32).nullable().optional(),
+  targetDurationSeconds: z.number().int().positive().nullable().optional(),
+  dayStartMinute: z.number().int().min(0).max(1439).default(0),
+  timezone: timezoneSchema.optional(),
+  effectiveFrom: dateSchema.optional(),
+  anchorDate: dateSchema.optional(),
+});
+
+function refineSchedule(
+  value: z.infer<typeof scheduleInputObject>,
+  context: z.RefinementCtx
+): void {
+  if (value.cadence === "weekly" && value.weekdays.length === 0 && value.timesPerWeek == null) {
+    context.addIssue({
+      code: "custom",
+      message: "Weekly schedules need weekdays or a times-per-week target.",
+    });
+  }
+  if (value.cadence === "interval" && value.intervalDays == null) {
+    context.addIssue({
+      code: "custom",
+      message: "Interval schedules need an interval in days.",
+    });
+  }
+  if (value.cadence === "monthly" && value.monthDay == null) {
+    context.addIssue({
+      code: "custom",
+      message: "Monthly schedules need a day of the month.",
+    });
+  }
+}
+
+export const scheduleInputSchema = scheduleInputObject.superRefine(refineSchedule);
+
+export const createScheduleVersionSchema = scheduleInputObject
+  .extend({ effectiveFrom: dateSchema })
+  .superRefine(refineSchedule);
+
+export const scheduleExceptionSchema = z
+  .object({
+    startDate: dateSchema,
+    endDate: dateSchema,
+    kind: scheduleExceptionKindSchema,
+    reason: z.string().trim().max(500).nullable().optional(),
+  })
+  .refine((value) => value.endDate >= value.startDate, {
+    message: "End date cannot be before the start date.",
+  });
+
 export const createHabitSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(120),
+  description: z.string().trim().max(500).nullable().optional(),
   category: categorySchema,
   color: hexColorSchema,
   order: z.number().int().min(0).max(100_000),
   isActive: z.boolean().default(true),
+  kind: habitKindSchema.default("check_in"),
+  targetValue: z.number().positive().nullable().optional(),
+  unit: z.string().trim().min(1).max(32).nullable().optional(),
+  targetDurationSeconds: z.number().int().positive().nullable().optional(),
+  schedule: scheduleInputSchema.optional(),
 });
 
 export const updateHabitSchema = z
   .object({
     name: z.string().trim().min(1).max(120).optional(),
+    description: z.string().trim().max(500).nullable().optional(),
     category: categorySchema.optional(),
     color: hexColorSchema.optional(),
     order: z.number().int().min(0).max(100_000).optional(),
     isActive: z.boolean().optional(),
+    kind: habitKindSchema.optional(),
+    targetValue: z.number().positive().nullable().optional(),
+    unit: z.string().trim().min(1).max(32).nullable().optional(),
+    targetDurationSeconds: z.number().int().positive().nullable().optional(),
+    schedule: scheduleInputSchema.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, "No changes supplied.");
 
 export const habitLogSchema = z.object({
   habitId: z.string().min(1),
   date: dateSchema,
-  status: statusSchema,
+  status: statusSchema.optional(),
   updatedAt: z.string().datetime({ offset: true }),
+  occurrence: z.number().int().min(1).max(100).default(1),
+  value: z.number().min(0).nullable().optional(),
+  unit: z.string().trim().min(1).max(32).nullable().optional(),
+  note: z.string().trim().max(2000).nullable().optional(),
+  source: checkInSourceSchema.default("manual"),
+  startedAt: z.string().datetime({ offset: true }).nullable().optional(),
+  endedAt: z.string().datetime({ offset: true }).nullable().optional(),
+  createdAt: z.string().datetime({ offset: true }).optional(),
+  editedAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export const upsertLogsSchema = z
@@ -58,7 +160,7 @@ export const upsertLogsSchema = z
 export const profilePatchSchema = z
   .object({
     name: z.string().trim().min(1).max(120).optional(),
-    timezone: z.string().min(1).max(120).optional(),
+    timezone: timezoneSchema.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, "No changes supplied.");
 
@@ -80,5 +182,7 @@ export const onboardingModeSchema = z.object({
 export type CreateHabitInput = z.infer<typeof createHabitSchema>;
 export type UpdateHabitInput = z.infer<typeof updateHabitSchema>;
 export type UpsertLogsInput = z.infer<typeof upsertLogsSchema>;
+export type CreateScheduleVersionInput = z.infer<typeof createScheduleVersionSchema>;
+export type ScheduleExceptionInput = z.infer<typeof scheduleExceptionSchema>;
 export type ProfilePatchInput = z.infer<typeof profilePatchSchema>;
 export type PreferencesPatchSchemaType = z.infer<typeof preferencesPatchSchema>;

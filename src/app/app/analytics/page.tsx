@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
 import { dailyScore, formatPercent, habitCompletionRate, shiftMonth, toMonthString } from "@/domain/calculations";
+import { scheduledDatesForRange } from "@/domain/schedule";
 import { useAnalytics, useHabits } from "@/lib/hooks/use-workspace";
 import { cn } from "@/lib/utils";
 
@@ -36,8 +37,22 @@ export default function AnalyticsPage() {
   const { habits } = useHabits(userId);
 
   const allLogs = data?.logs ?? [];
+  const schedules = data?.schedules ?? [];
+  const exceptions = data?.exceptions ?? [];
   const activeHabits = habits.filter((habit) => habit.isActive);
   const currentMonth = toMonthString(new Date());
+  const rangeStart = data?.months[0] ? `${data.months[0]}-01` : `${currentMonth}-01`;
+  const rangeEndMonth = data?.months[data.months.length - 1] ?? currentMonth;
+  const rangeEnd = format(
+    endOfMonth(new Date(`${rangeEndMonth}-01T00:00:00Z`)),
+    "yyyy-MM-dd"
+  );
+
+  const rateForHabit = (habitId: string, logs = allLogs) =>
+    habitCompletionRate(
+      logs.filter((log) => log.habitId === habitId),
+      scheduledDatesForRange(schedules, exceptions, rangeStart, rangeEnd, habitId)
+    );
 
   const lineData = (() => {
     if (viewMode === "weekly") {
@@ -66,7 +81,7 @@ export default function AnalyticsPage() {
 
   const habitData = activeHabits.slice(0, 8).map((habit) => ({
     label: habit.name.slice(0, 10),
-    value: +(habitCompletionRate(allLogs.filter((log) => log.habitId === habit.id)) * 100).toFixed(1),
+    value: +(rateForHabit(habit.id) * 100).toFixed(1),
   }));
 
   return (
@@ -74,7 +89,7 @@ export default function AnalyticsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight">Analytics</h1>
-          <p className="text-sm text-muted-foreground">Trends across your logged days.</p>
+          <p className="text-sm text-muted-foreground">Trends across scheduled opportunities, not just logged days.</p>
         </div>
         <div className="flex rounded-md border border-border bg-muted p-1">
           {MODES.map((mode) => (
@@ -155,7 +170,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {activeHabits.map((habit) => {
-                const rate = habitCompletionRate(allLogs.filter((log) => log.habitId === habit.id));
+                const rate = rateForHabit(habit.id);
                 const color = rate >= 0.7 ? "var(--color-complete)" : rate >= 0.4 ? "var(--color-partial)" : "var(--color-missed)";
                 return (
                   <div key={habit.id} className="grid grid-cols-[8rem_1fr_4rem] items-center gap-3">

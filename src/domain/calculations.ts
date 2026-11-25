@@ -12,7 +12,14 @@ import type {
   HabitLog,
   HabitStatus,
   MonthlySnapshot,
+  ScheduleException,
+  HabitSchedule,
+  ScheduledOpportunity,
 } from "./types";
+import {
+  scheduledOpportunitiesForRange,
+  summarizeOpportunities,
+} from "./schedule";
 
 export const STATUS = {
   COMPLETE: 1 as HabitStatus,
@@ -30,10 +37,24 @@ export function cycleStatus(current: HabitStatus | undefined): HabitStatus {
   return 1;
 }
 
-/** Only days with a log are counted. */
-export function habitCompletionRate(logs: HabitLog[]): number {
-  if (!logs.length) return 0;
-  return logs.reduce((sum, log) => sum + log.status, 0) / logs.length;
+/** Legacy average over logged days. Pass scheduled dates for schedule-aware rates. */
+export function habitCompletionRate(logs: HabitLog[], scheduledDates?: string[]): number {
+  if (!scheduledDates) {
+    if (!logs.length) return 0;
+    return logs.reduce((sum, log) => sum + log.status, 0) / logs.length;
+  }
+  if (!scheduledDates.length) return 0;
+
+  const byDate = new Map<string, HabitLog>();
+  for (const log of logs) {
+    const existing = byDate.get(log.date);
+    if (!existing || log.status > existing.status) byDate.set(log.date, log);
+  }
+  const earned = scheduledDates.reduce(
+    (sum, date) => sum + (byDate.get(date)?.status ?? 0),
+    0
+  );
+  return earned / scheduledDates.length;
 }
 
 export function dailyScore(logs: HabitLog[]): number {
@@ -51,15 +72,65 @@ export function monthlyCompletionRate(habitRates: number[]): number {
   return habitRates.reduce((sum, rate) => sum + rate, 0) / habitRates.length;
 }
 
-/** Consecutive fully-complete days ending today (or the supplied day). */
+/** Count/value check-ins map onto the three-state status used by the grid. */
+export function statusFromValue(habit: Habit, value: number | null | undefined): HabitStatus {
+  if (value === null || value === undefined || !Number.isFinite(value) || value <= 0) {
+    return STATUS.MISSED;
+  }
+  if (habit.kind === "count") {
+    const target = habit.targetValue ?? 1;
+    const ratio = value / target;
+    return ratio >= 1 ? STATUS.COMPLETE : STATUS.PARTIAL;
+  }
+  if (habit.kind === "timer") {
+    const target = habit.targetDurationSeconds ?? 1;
+    const ratio = value / target;
+    return ratio >= 1 ? STATUS.COMPLETE : STATUS.PARTIAL;
+  }
+  return STATUS.COMPLETE;
+}
+
+export function resolveStatus(
+  habit: Habit,
+  status: HabitStatus | undefined,
+  value: number | null | undefined
+): HabitStatus {
+  return status ?? statusFromValue(habit, value);
+}
+
+function statusByDate(logs: HabitLog[]): Map<string, HabitStatus> {
+  const statuses = new Map<string, HabitStatus>();
+  for (const log of logs) {
+    const current = statuses.get(log.date);
+    if (current === undefined || log.status > current) statuses.set(log.date, log.status);
+  }
+  return statuses;
+}
+
+/** Consecutive eligible days ending today (or the supplied day). */
 export function currentStreak(
   logs: HabitLog[],
-  today: Date = new Date()
+  today: Date = new Date(),
+  scheduledDates?: string[]
 ): number {
-  const statuses = new Map(logs.map((log) => [log.date, log.status]));
+  const statuses = statusByDate(logs);
+
+  if (scheduledDates?.length) {
+    const todayKey = format(today, "yyyy-MM-dd");
+    const eligible = [...new Set(scheduledDates)]
+      .filter((date) => date <= todayKey)
+      .sort()
+      .reverse();
+    let streak = 0;
+    for (const date of eligible) {
+      if (statuses.get(date) !== 1) break;
+      streak += 1;
+    }
+    return streak;
+  }
+
   let streak = 0;
   let cursor = today;
-
   while (true) {
     if (statuses.get(format(cursor, "yyyy-MM-dd")) !== 1) break;
     streak += 1;
@@ -68,9 +139,29 @@ export function currentStreak(
   return streak;
 }
 
-/** Longest run of fully-complete days in chronological log order. */
-export function longestStreak(logs: HabitLog[]): number {
-  const dates = [...new Set(logs.filter((log) => log.status === 1).map((log) => log.date))].sort();
+/** Longest run of fully-complete eligible days. */
+export function longestStreak(logs: HabitLog[], scheduledDates?: string[]): number {
+  const statuses = statusByDate(logs);
+
+  if (scheduledDates?.length) {
+    const eligible = [...new Set(scheduledDates)].sort();
+    let longest = 0;
+    let run = 0;
+    for (const date of eligible) {
+      if (statuses.get(date) === 1) {
+        run += 1;
+        longest = Math.max(longest, run);
+      } else {
+        run = 0;
+      }
+    }
+    return longest;
+  }
+
+  const dates = [...statuses.entries()]
+    .filter(([, status]) => status === 1)
+    .map(([date]) => date)
+    .sort();
   let longest = 0;
   let run = 0;
   let previous: Date | null = null;
@@ -87,12 +178,18 @@ export function longestStreak(logs: HabitLog[]): number {
   return longest;
 }
 
+export interface SnapshotOptions {
+  schedules?: HabitSchedule[];
+  exceptions?: ScheduleException[];
+}
+
 /** Build the persisted monthly analytics snapshot from raw habits and logs. */
 export function buildMonthlySnapshot(
   month: string,
   habits: Habit[],
   allLogs: HabitLog[],
-  generatedAt: Date = new Date()
+  generatedAt: Date = new Date(),
+  options: SnapshotOptions = {}
 ): MonthlySnapshot {
   const [year, monthNumber] = month.split("-").map(Number);
   if (!year || !monthNumber) throw new Error(`Invalid month: ${month}`);
@@ -101,12 +198,43 @@ export function buildMonthlySnapshot(
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
   const monthLogs = allLogs.filter((log) => log.date.startsWith(month));
   const activeHabits = habits.filter((habit) => habit.isActive);
+  const schedules = options.schedules ?? [];
+  const exceptions = options.exceptions ?? [];
+  const start = `${month}-01`;
+  const end = `${month}-31`;
+
+  // Without schedule data, fall back to the legacy logged-day denominator so old
+  // cached snapshots remain readable. New writes always supply schedule versions.
+  const opportunities: ScheduledOpportunity[] = schedules.length
+    ? scheduledOpportunitiesForRange(schedules, exceptions, start, end)
+    : monthLogs.map((log) => ({
+        habitId: log.habitId,
+        date: log.date,
+        occurrence: log.occurrence ?? 1,
+        scheduleId: "legacy",
+      }));
+
+  const opportunitiesByHabit = new Map<string, ScheduledOpportunity[]>();
+  const opportunitiesByDate = new Map<string, ScheduledOpportunity[]>();
+  for (const opportunity of opportunities) {
+    const habitList = opportunitiesByHabit.get(opportunity.habitId) ?? [];
+    habitList.push(opportunity);
+    opportunitiesByHabit.set(opportunity.habitId, habitList);
+    const dayList = opportunitiesByDate.get(opportunity.date) ?? [];
+    dayList.push(opportunity);
+    opportunitiesByDate.set(opportunity.date, dayList);
+  }
 
   const habitScores: Record<string, number> = {};
+  const scheduledOpportunities: Record<string, number> = {};
   for (const habit of activeHabits) {
-    habitScores[habit.id] = habitCompletionRate(
-      monthLogs.filter((log) => log.habitId === habit.id)
+    const habitOpportunities = opportunitiesByHabit.get(habit.id) ?? [];
+    const summary = summarizeOpportunities(
+      monthLogs.filter((log) => log.habitId === habit.id),
+      habitOpportunities
     );
+    habitScores[habit.id] = summary.completionRate;
+    scheduledOpportunities[habit.id] = summary.scheduled;
   }
 
   const dailyScores: Record<string, number> = {};
@@ -114,10 +242,11 @@ export function buildMonthlySnapshot(
 
   for (const day of daysInMonth) {
     const date = format(day, "yyyy-MM-dd");
-    const dayLogs = monthLogs.filter((log) => log.date === date);
-    if (!dayLogs.length) continue;
+    const scheduled = opportunitiesByDate.get(date) ?? [];
+    if (!scheduled.length) continue;
 
-    const score = dailyScore(dayLogs);
+    const dayLogs = monthLogs.filter((log) => log.date === date);
+    const score = summarizeOpportunities(dayLogs, scheduled).completionRate;
     dailyScores[date] = score;
     const dayOfMonth = day.getDate();
     const weekKey =
@@ -155,6 +284,8 @@ export function buildMonthlySnapshot(
     habitScores,
     dailyScores,
     weeklyAverages,
+    scheduledOpportunities,
+    calculationVersion: 2,
     generatedAt: generatedAt.toISOString(),
   };
 }
@@ -207,8 +338,10 @@ export function parseMonth(month: string): { year: number; monthNumber: number }
   return { year, monthNumber };
 }
 
-export function logKey(log: Pick<HabitLog, "date" | "habitId">): string {
-  return `${log.date}_${log.habitId}`;
+export function logKey(
+  log: Pick<HabitLog, "date" | "habitId" | "occurrence">
+): string {
+  return `${log.date}_${log.habitId}_${log.occurrence ?? 1}`;
 }
 
 export function dedupeLogs(logs: HabitLog[]): HabitLog[] {

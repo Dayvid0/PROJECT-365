@@ -43,10 +43,15 @@ export function buildDefaultHabits(
   return DEFAULT_HABIT_SEEDS.map((seed, index) => ({
     id: makeId(),
     name: seed.name,
+    description: null,
     category: seed.category,
     color: seed.color || CATEGORY_COLORS[seed.category],
     order: index,
     isActive: true,
     createdAt: now.toISOString(),
+    kind: "check_in",
+    targetValue: null,
+    unit: null,
+    targetDurationSeconds: null,
   }));
 }

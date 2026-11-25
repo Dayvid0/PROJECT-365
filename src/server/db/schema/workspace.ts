@@ -10,7 +10,13 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { ulid } from "ulidx";
-import { HABIT_CATEGORIES } from "@/lib/constants";
+import {
+  CADENCE_KINDS,
+  CHECKIN_SOURCES,
+  HABIT_CATEGORIES,
+  HABIT_KINDS,
+  SCHEDULE_EXCEPTION_KINDS,
+} from "@/lib/constants";
 import { users } from "./auth";
 
 export const userPreferences = sqliteTable("user_preferences", {
@@ -27,16 +33,83 @@ export const habits = sqliteTable(
     id: text("id").primaryKey().$defaultFn(() => ulid()),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    description: text("description"),
     category: text("category", { enum: HABIT_CATEGORIES }).notNull(),
     position: integer("position").notNull().default(0),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
     color: text("color").notNull(),
+    kind: text("kind", { enum: HABIT_KINDS }).notNull().default("check_in"),
+    targetValue: real("target_value"),
+    unit: text("unit"),
+    targetDurationSeconds: integer("target_duration_seconds"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   },
   (table) => [
     index("habits_user_position_idx").on(table.userId, table.position),
     index("habits_user_active_idx").on(table.userId, table.isActive),
+  ]
+);
+
+/** Immutable cadence versions; historical dates keep the version that governed them. */
+export const habitScheduleVersions = sqliteTable(
+  "habit_schedule_versions",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    habitId: text("habit_id").notNull().references(() => habits.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    effectiveFrom: text("effective_from").notNull(),
+    effectiveTo: text("effective_to"),
+    cadence: text("cadence", { enum: CADENCE_KINDS }).notNull(),
+    weekdays: text("weekdays", { mode: "json" }).$type<number[]>().notNull().default([]),
+    timesPerWeek: integer("times_per_week"),
+    intervalDays: integer("interval_days"),
+    monthDay: integer("month_day"),
+    timesPerDay: integer("times_per_day").notNull().default(1),
+    targetValue: real("target_value"),
+    unit: text("unit"),
+    targetDurationSeconds: integer("target_duration_seconds"),
+    dayStartMinute: integer("day_start_minute").notNull().default(0),
+    timezone: text("timezone").notNull().default("UTC"),
+    anchorDate: text("anchor_date").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("habit_schedule_versions_user_habit_version_uidx").on(
+      table.userId,
+      table.habitId,
+      table.version
+    ),
+    index("habit_schedule_versions_user_habit_effective_idx").on(
+      table.userId,
+      table.habitId,
+      table.effectiveFrom
+    ),
+    index("habit_schedule_versions_user_effective_idx").on(table.userId, table.effectiveFrom),
+  ]
+);
+
+export const habitScheduleExceptions = sqliteTable(
+  "habit_schedule_exceptions",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    habitId: text("habit_id").notNull().references(() => habits.id, { onDelete: "cascade" }),
+    startDate: text("start_date").notNull(),
+    endDate: text("end_date").notNull(),
+    kind: text("kind", { enum: SCHEDULE_EXCEPTION_KINDS }).notNull(),
+    reason: text("reason"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("habit_schedule_exceptions_user_habit_dates_idx").on(
+      table.userId,
+      table.habitId,
+      table.startDate,
+      table.endDate
+    ),
+    index("habit_schedule_exceptions_user_dates_idx").on(table.userId, table.startDate),
   ]
 );
 
@@ -48,10 +121,26 @@ export const habitLogs = sqliteTable(
     habitId: text("habit_id").notNull().references(() => habits.id, { onDelete: "cascade" }),
     date: text("date").notNull(),
     status: real("status").notNull(),
+    occurrence: integer("occurrence").notNull().default(1),
+    value: real("value"),
+    unit: text("unit"),
+    note: text("note"),
+    source: text("source", { enum: CHECKIN_SOURCES }).notNull().default("manual"),
+    startedAt: integer("started_at", { mode: "timestamp_ms" }),
+    endedAt: integer("ended_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    editedAt: integer("edited_at", { mode: "timestamp_ms" }),
+    isSkip: integer("is_skip", { mode: "boolean" }).notNull().default(false),
+    plannedBreak: integer("planned_break", { mode: "boolean" }).notNull().default(false),
   },
   (table) => [
-    uniqueIndex("habit_logs_user_habit_date_uidx").on(table.userId, table.habitId, table.date),
+    uniqueIndex("habit_logs_user_habit_date_occurrence_uidx").on(
+      table.userId,
+      table.habitId,
+      table.date,
+      table.occurrence
+    ),
     index("habit_logs_user_date_idx").on(table.userId, table.date),
     check("habit_logs_status_check", sql`${table.status} in (0, 0.5, 1)`),
   ]
@@ -71,3 +160,5 @@ export const monthlySnapshots = sqliteTable(
 
 export type HabitRow = typeof habits.$inferSelect;
 export type HabitLogRow = typeof habitLogs.$inferSelect;
+export type HabitScheduleVersionRow = typeof habitScheduleVersions.$inferSelect;
+export type ScheduleExceptionRow = typeof habitScheduleExceptions.$inferSelect;

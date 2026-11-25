@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { format } from "date-fns";
+import { endOfMonth, format } from "date-fns";
 import { ArrowLeft, Flame } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
   shiftMonth,
   toMonthString,
 } from "@/domain/calculations";
+import { scheduledDatesForRange } from "@/domain/schedule";
 import type { HabitStatus } from "@/domain/types";
 import { useAnalytics, useHabits } from "@/lib/hooks/use-workspace";
 
@@ -41,20 +42,36 @@ export default function HabitDetailPage() {
 
   const habit = habits.find((candidate) => candidate.id === habitId);
   const allLogs = (data?.logs ?? []).filter((log) => log.habitId === habitId);
+  const schedules = data?.schedules ?? [];
+  const exceptions = data?.exceptions ?? [];
   const logMap = new Map(allLogs.map((log) => [log.date, log.status]));
 
   const currentMonth = toMonthString(new Date());
   const previousMonth = shiftMonth(currentMonth, -1);
-  const currentRate = habitCompletionRate(
-    allLogs.filter((log) => log.date.startsWith(`${currentMonth}-`))
-  );
-  const previousRate = habitCompletionRate(
-    allLogs.filter((log) => log.date.startsWith(`${previousMonth}-`))
-  );
-  const trend = currentRate - previousRate;
-  const streak = currentStreak(allLogs);
   const months = Array.from({ length: 12 }, (_, index) => shiftMonth(currentMonth, index - 11));
   const breakdown = Array.from({ length: 6 }, (_, index) => shiftMonth(currentMonth, -index));
+  const monthEnd = (month: string) =>
+    format(endOfMonth(new Date(`${month}-01T00:00:00Z`)), "yyyy-MM-dd");
+  const scheduledDatesForMonth = (month: string) =>
+    scheduledDatesForRange(schedules, exceptions, `${month}-01`, monthEnd(month), habitId);
+
+  const currentRate = habitCompletionRate(
+    allLogs.filter((log) => log.date.startsWith(`${currentMonth}-`)),
+    scheduledDatesForMonth(currentMonth)
+  );
+  const previousRate = habitCompletionRate(
+    allLogs.filter((log) => log.date.startsWith(`${previousMonth}-`)),
+    scheduledDatesForMonth(previousMonth)
+  );
+  const trend = currentRate - previousRate;
+  const streakDates = scheduledDatesForRange(
+    schedules,
+    exceptions,
+    `${months[0] ?? previousMonth}-01`,
+    monthEnd(currentMonth),
+    habitId
+  );
+  const streak = currentStreak(allLogs, new Date(), streakDates);
 
   if (!habit) {
     return (
@@ -146,7 +163,8 @@ export default function HabitDetailPage() {
           {isLoading ? <p className="text-sm text-muted-foreground">Loading history…</p> : null}
           {breakdown.map((month) => {
             const rate = habitCompletionRate(
-              allLogs.filter((log) => log.date.startsWith(`${month}-`))
+              allLogs.filter((log) => log.date.startsWith(`${month}-`)),
+              scheduledDatesForMonth(month)
             );
             return (
               <div key={month} className="grid grid-cols-[5rem_1fr_4rem] items-center gap-3">

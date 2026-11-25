@@ -9,7 +9,14 @@ import {
   habitCompletionRate,
   logKey,
 } from "@/domain/calculations";
-import type { Habit, HabitLog, HabitStatus } from "@/domain/types";
+import { scheduledDatesForRange } from "@/domain/schedule";
+import type {
+  Habit,
+  HabitLog,
+  HabitSchedule,
+  HabitStatus,
+  ScheduleException,
+} from "@/domain/types";
 import { cn } from "@/lib/utils";
 
 const STATUS_COLOR: Record<HabitStatus | "none", string> = {
@@ -37,14 +44,21 @@ export function HabitGridTable({
   month,
   habits,
   logs,
+  schedules,
+  exceptions,
   onCellTap,
 }: {
   month: string;
   habits: Habit[];
   logs: HabitLog[];
+  schedules: HabitSchedule[];
+  exceptions: ScheduleException[];
   onCellTap: (habitId: string, date: string, next: HabitStatus) => void;
 }) {
   const weeks = getMonthDayGrid(month);
+  const monthDays = weeks.flat().map((day) => format(day, "yyyy-MM-dd"));
+  const monthStart = monthDays[0] ?? `${month}-01`;
+  const monthEnd = monthDays[monthDays.length - 1] ?? `${month}-31`;
   const byKey = new Map(logs.map((log) => [logKey(log), log]));
   const getLog = (habitId: string, date: string) => byKey.get(`${date}_${habitId}`);
 
@@ -75,7 +89,15 @@ export function HabitGridTable({
 
         {habits.map((habit) => {
           const habitLogs = logs.filter((log) => log.habitId === habit.id);
-          const rate = habitCompletionRate(habitLogs);
+          const scheduledDates = scheduledDatesForRange(
+            schedules,
+            exceptions,
+            monthStart,
+            monthEnd,
+            habit.id
+          );
+          const scheduledSet = new Set(scheduledDates);
+          const rate = habitCompletionRate(habitLogs, scheduledDates);
           return (
             <div key={habit.id} className="flex border-b border-border last:border-b-0">
               <Link
@@ -98,8 +120,8 @@ export function HabitGridTable({
                         key={date}
                         type="button"
                         onClick={() => onCellTap(habit.id, date, next)}
-                        aria-label={`${habit.name} on ${format(day, "MMM d")}: ${statusIcon(log?.status)} (tap for ${statusIcon(next)})`}
-                        title={`${format(day, "MMM d")} · ${statusIcon(log?.status)}`}
+                        aria-label={`${habit.name} on ${format(day, "MMM d")}: ${statusIcon(log?.status)}${scheduledSet.has(date) ? "" : " (not scheduled)"} (tap for ${statusIcon(next)})`}
+                        title={`${format(day, "MMM d")} · ${statusIcon(log?.status)}${scheduledSet.has(date) ? "" : " · not scheduled"}`}
                         className={cn(
                           "m-0.5 flex size-8 items-center justify-center rounded border text-[13px] font-bold transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-ring"
                         )}

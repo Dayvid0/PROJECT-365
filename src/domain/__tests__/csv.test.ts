@@ -9,8 +9,13 @@ const habits: Habit[] = [
     category: "learning",
     order: 0,
     isActive: true,
+    description: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     color: "#3B82F6",
+    kind: "check_in",
+    targetValue: null,
+    unit: null,
+    targetDurationSeconds: null,
   },
 ];
 

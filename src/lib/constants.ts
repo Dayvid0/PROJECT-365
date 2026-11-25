@@ -12,6 +12,14 @@ export const HABIT_CATEGORIES = [
   "other",
 ] as const;
 
+export const HABIT_KINDS = ["check_in", "count", "timer"] as const;
+
+export const CADENCE_KINDS = ["daily", "weekly", "interval", "monthly"] as const;
+
+export const CHECKIN_SOURCES = ["manual", "import", "timer", "system"] as const;
+
+export const SCHEDULE_EXCEPTION_KINDS = ["skip", "planned_break"] as const;
+
 export const PRESET_HABIT_COLORS = [
   "#7C5CFC",
   "#22C55E",

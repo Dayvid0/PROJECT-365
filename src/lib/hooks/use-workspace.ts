@@ -13,8 +13,10 @@ import type {
 } from "@/domain/types";
 import type {
   CreateHabitInput,
+  CreateScheduleVersionInput,
   PreferencesPatchSchemaType,
   ProfilePatchInput,
+  ScheduleExceptionInput,
   UpdateHabitInput,
 } from "@/domain/validation";
 import { apiFetch, errorMessage } from "@/lib/api";
@@ -45,6 +47,8 @@ export function useHabits(userId: string) {
   const query = useBootstrap(userId);
   return {
     habits: query.data?.habits ?? [],
+    schedules: query.data?.schedules ?? [],
+    exceptions: query.data?.exceptions ?? [],
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,
@@ -188,6 +192,62 @@ export function useUpsertLogs(userId: string) {
         queryKey: workspaceKeys.bootstrap(userId),
       });
     },
+  });
+}
+
+function invalidateWorkspaceAnalytics(queryClient: ReturnType<typeof useQueryClient>, userId: string) {
+  void queryClient.invalidateQueries({ queryKey: workspaceKeys.bootstrap(userId) });
+  void queryClient.invalidateQueries({ queryKey: workspaceKeys.analytics(userId, 12) });
+}
+
+export function useCreateScheduleVersion(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateScheduleVersionInput & { habitId: string }) => {
+      const { habitId, ...schedule } = input;
+      return apiFetch<{ schedule: unknown }>("/api/workspace/schedules", {
+        method: "POST",
+        body: JSON.stringify({ habitId, schedule }),
+      });
+    },
+    onSuccess: () => {
+      invalidateWorkspaceAnalytics(queryClient, userId);
+      toast.success("Schedule updated");
+    },
+    onError: (error) => toast.error("Could not update schedule", { description: errorMessage(error) }),
+  });
+}
+
+export function useCreateException(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ScheduleExceptionInput & { habitId: string }) => {
+      const { habitId, ...exception } = input;
+      return apiFetch<{ exception: unknown }>("/api/workspace/exceptions", {
+        method: "POST",
+        body: JSON.stringify({ habitId, exception }),
+      });
+    },
+    onSuccess: () => {
+      invalidateWorkspaceAnalytics(queryClient, userId);
+      toast.success("Break saved");
+    },
+    onError: (error) => toast.error("Could not save break", { description: errorMessage(error) }),
+  });
+}
+
+export function useDeleteException(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<{ deleted: boolean }>(`/api/workspace/exceptions?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      invalidateWorkspaceAnalytics(queryClient, userId);
+      toast.success("Break removed");
+    },
+    onError: (error) => toast.error("Could not remove break", { description: errorMessage(error) }),
   });
 }
 
