@@ -16,6 +16,7 @@ import {
   HABIT_CATEGORIES,
   HABIT_KINDS,
   SCHEDULE_EXCEPTION_KINDS,
+  STREAK_POLICIES,
 } from "@/lib/constants";
 import { users } from "./auth";
 
@@ -24,6 +25,10 @@ export const userPreferences = sqliteTable("user_preferences", {
   theme: text("theme", { enum: ["light", "dark"] }).notNull().default("dark"),
   notificationTime: text("notification_time").notNull().default("08:00"),
   onboardingCompleted: integer("onboarding_completed", { mode: "boolean" }).notNull().default(false),
+  streakPolicy: text("streak_policy", { enum: STREAK_POLICIES }).notNull().default("strict"),
+  remindersEnabled: integer("reminders_enabled", { mode: "boolean" }).notNull().default(false),
+  quietHoursStart: text("quiet_hours_start").notNull().default("22:00"),
+  quietHoursEnd: text("quiet_hours_end").notNull().default("07:00"),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 
@@ -146,6 +151,26 @@ export const habitLogs = sqliteTable(
   ]
 );
 
+export const habitReminders = sqliteTable(
+  "habit_reminders",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    habitId: text("habit_id").notNull().references(() => habits.id, { onDelete: "cascade" }),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+    time: text("time").notNull().default("08:00"),
+    weekdays: text("weekdays", { mode: "json" }).$type<number[]>().notNull().default([]),
+    snoozeMinutes: integer("snooze_minutes").notNull().default(10),
+    stopAfterCompletion: integer("stop_after_completion", { mode: "boolean" }).notNull().default(true),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("habit_reminders_user_habit_uidx").on(table.userId, table.habitId),
+    index("habit_reminders_user_enabled_idx").on(table.userId, table.enabled),
+  ]
+);
+
 /** Persisted monthly analytics cache; JSON payload keeps the snapshot shape portable. */
 export const monthlySnapshots = sqliteTable(
   "monthly_snapshots",
@@ -162,3 +187,4 @@ export type HabitRow = typeof habits.$inferSelect;
 export type HabitLogRow = typeof habitLogs.$inferSelect;
 export type HabitScheduleVersionRow = typeof habitScheduleVersions.$inferSelect;
 export type ScheduleExceptionRow = typeof habitScheduleExceptions.$inferSelect;
+export type HabitReminderRow = typeof habitReminders.$inferSelect;

@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { endOfMonth, format } from "date-fns";
-import { ArrowLeft, Flame } from "lucide-react";
+import { ArrowLeft, Bell, EyeOff, Flame } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,18 +14,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
 import {
-  currentStreak,
   formatPercent,
   getMonthDayGrid,
   habitCompletionRate,
   shiftMonth,
+  streakSummary,
   toMonthString,
 } from "@/domain/calculations";
 import { scheduledDatesForRange } from "@/domain/schedule";
 import type { HabitStatus } from "@/domain/types";
-import { useAnalytics, useHabits } from "@/lib/hooks/use-workspace";
+import type { HabitReminderInput } from "@/domain/validation";
+import { WEEKDAY_LABELS } from "@/lib/constants";
+import { useAnalytics, useHabits, useUpsertReminder } from "@/lib/hooks/use-workspace";
 
 const STATUS_COLOR: Record<HabitStatus | "none", string> = {
   1: "#22C55E",
@@ -33,18 +39,31 @@ const STATUS_COLOR: Record<HabitStatus | "none", string> = {
   none: "#2D2D4A",
 };
 
+const EMPTY_REMINDER: HabitReminderInput = {
+  enabled: false,
+  time: "08:00",
+  weekdays: [],
+  snoozeMinutes: 10,
+  stopAfterCompletion: true,
+};
+
 export default function HabitDetailPage() {
   const params = useParams<{ habitId: string }>();
   const habitId = params.habitId;
   const userId = useWorkspaceUserId();
-  const { habits } = useHabits(userId);
+  const { habits, reminders, user } = useHabits(userId);
+  const upsertReminder = useUpsertReminder(userId);
   const { data, isLoading } = useAnalytics(userId, 12);
+  const [reminderDraft, setReminderDraft] = useState<HabitReminderInput | null>(null);
 
   const habit = habits.find((candidate) => candidate.id === habitId);
   const allLogs = (data?.logs ?? []).filter((log) => log.habitId === habitId);
   const schedules = data?.schedules ?? [];
   const exceptions = data?.exceptions ?? [];
   const logMap = new Map(allLogs.map((log) => [log.date, log.status]));
+
+  const savedReminder = reminders.find((reminder) => reminder.habitId === habitId);
+  const reminder = reminderDraft ?? savedReminder ?? EMPTY_REMINDER;
 
   const currentMonth = toMonthString(new Date());
   const previousMonth = shiftMonth(currentMonth, -1);
@@ -71,7 +90,24 @@ export default function HabitDetailPage() {
     monthEnd(currentMonth),
     habitId
   );
-  const streak = currentStreak(allLogs, new Date(), streakDates);
+  const streak = streakSummary(allLogs, streakDates, user?.streakPolicy ?? "strict");
+
+  const toggleWeekday = (day: number) => {
+    const weekdays = reminder.weekdays.includes(day)
+      ? reminder.weekdays.filter((value) => value !== day)
+      : [...reminder.weekdays, day].sort((a, b) => a - b);
+    setReminderDraft({ ...reminder, weekdays });
+  };
+
+  const saveReminder = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    try {
+      await upsertReminder.mutateAsync({ habitId, reminder });
+      setReminderDraft(null);
+    } catch {
+      // Error toasts are handled by the mutation hook.
+    }
+  };
 
   if (!habit) {
     return (
@@ -108,17 +144,109 @@ export default function HabitDetailPage() {
             <p className="text-xs text-muted-foreground">This month</p>
           </div>
           <div>
-            <p className={`text-2xl font-extrabold tabular ${trend >= 0 ? "text-[color:var(--color-complete)]" : "text-[color:var(--color-missed)]"}`}>
+            <p className={`text-2xl font-extrabold tabular ${trend >= 0 ? "text-[color:var(--color-complete)]" : "text-[color:var(--color-partial)]"}`}>
               {trend >= 0 ? "↑" : "↓"} {Math.abs(trend * 100).toFixed(1)}%
             </p>
             <p className="text-xs text-muted-foreground">vs last month</p>
           </div>
           <div>
-            <p className="flex items-center gap-1 text-2xl font-extrabold tabular text-[color:var(--color-partial)]">
-              <Flame className="size-5" /> {streak}
-            </p>
-            <p className="text-xs text-muted-foreground">day streak</p>
+            {streak.visible ? (
+              <p className="flex items-center gap-1 text-2xl font-extrabold tabular text-[color:var(--color-partial)]">
+                <Flame className="size-5" /> {streak.current}
+                <span className="text-xs font-normal text-muted-foreground">best {streak.best}</span>
+              </p>
+            ) : (
+              <p className="flex items-center gap-1 text-2xl font-extrabold text-muted-foreground">
+                <EyeOff className="size-5" /> Hidden
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">{streak.label}</p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="size-4 text-muted-foreground" /> Reminder
+          </CardTitle>
+          <CardDescription>
+            Preferences are saved here. The web app does not send push notifications yet, so these
+            only appear as in-app nudges while a tab is open.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={saveReminder} className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="reminder-enabled"><span className="text-sm">Reminder for this habit</span></Label>
+              <Switch
+                id="reminder-enabled"
+                checked={reminder.enabled}
+                onCheckedChange={(enabled) => setReminderDraft({ ...reminder, enabled })}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="reminder-time">Time</Label>
+                <Input
+                  id="reminder-time"
+                  type="time"
+                  className="min-h-11"
+                  value={reminder.time}
+                  onChange={(event) => setReminderDraft({ ...reminder, time: event.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="snooze-minutes">Snooze (minutes)</Label>
+                <Input
+                  id="snooze-minutes"
+                  type="number"
+                  min={0}
+                  max={240}
+                  className="min-h-11"
+                  value={reminder.snoozeMinutes}
+                  onChange={(event) =>
+                    setReminderDraft({
+                      ...reminder,
+                      snoozeMinutes: Math.max(0, Math.min(240, Number(event.target.value) || 0)),
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Days (all days if none selected)</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {WEEKDAY_LABELS.map((label, day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    aria-pressed={reminder.weekdays.includes(day)}
+                    onClick={() => toggleWeekday(day)}
+                    className={`tap-target rounded-full border px-3 text-xs font-medium ${
+                      reminder.weekdays.includes(day)
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                className="size-4"
+                checked={reminder.stopAfterCompletion}
+                onChange={(event) =>
+                  setReminderDraft({ ...reminder, stopAfterCompletion: event.target.checked })
+                }
+              />
+              Stop nudging after this habit is complete
+            </label>
+            <Button type="submit" disabled={upsertReminder.isPending}>Save reminder</Button>
+          </form>
         </CardContent>
       </Card>
 

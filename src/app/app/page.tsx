@@ -144,7 +144,7 @@ export default function DashboardPage() {
             </Card>
             <Card className="border-[color-mix(in_srgb,#F59E0B_50%,var(--border))] bg-card">
               <CardHeader className="pb-2">
-                <CardDescription>⚠️ Needs work</CardDescription>
+                <CardDescription>🌱 Focus habit</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="truncate text-lg font-bold text-[color:var(--color-partial)]">
@@ -198,7 +198,7 @@ export default function DashboardPage() {
               <p className="text-lg font-extrabold tabular text-[color:var(--color-missed)]">
                 {formatPercent(snapshot?.failureRate ?? 0)}
               </p>
-              <p className="text-[11px] text-muted-foreground">Failure rate</p>
+              <p className="text-[11px] text-muted-foreground">Not yet complete</p>
             </div>
             <div>
               <p className="text-lg font-extrabold tabular text-primary">

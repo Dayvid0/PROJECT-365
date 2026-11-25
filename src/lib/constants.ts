@@ -20,6 +20,18 @@ export const CHECKIN_SOURCES = ["manual", "import", "timer", "system"] as const;
 
 export const SCHEDULE_EXCEPTION_KINDS = ["skip", "planned_break"] as const;
 
+export const STREAK_POLICIES = ["strict", "target", "off"] as const;
+
+export const WEEKDAY_LABELS = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+] as const;
+
 export const PRESET_HABIT_COLORS = [
   "#7C5CFC",
   "#22C55E",

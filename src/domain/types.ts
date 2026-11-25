@@ -18,6 +18,20 @@ export type CheckInSource = "manual" | "import" | "timer" | "system";
 
 export type ScheduleExceptionKind = "skip" | "planned_break";
 
+/**
+ * strict  — consecutive scheduled days, broken by a lapse
+ * target  — consistency across the most recent scheduled opportunities
+ * off     — streaks hidden entirely; completion history still kept
+ */
+export type StreakPolicy = "strict" | "target" | "off";
+
+export interface StreakSummary {
+  current: number;
+  best: number;
+  visible: boolean;
+  label: string;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -26,6 +40,22 @@ export interface UserProfile {
   theme: "light" | "dark";
   notificationTime: string;
   onboardingCompleted: boolean;
+  streakPolicy: StreakPolicy;
+  remindersEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+  createdAt: string;
+}
+
+/** Local reminder preferences. Web reminders only fire while the app is open. */
+export interface HabitReminder {
+  id: string;
+  habitId: string;
+  enabled: boolean;
+  time: string;
+  weekdays: number[];
+  snoozeMinutes: number;
+  stopAfterCompletion: boolean;
   createdAt: string;
 }
 
@@ -141,6 +171,7 @@ export interface BootstrapData {
   habits: Habit[];
   schedules: HabitSchedule[];
   exceptions: ScheduleException[];
+  reminders: HabitReminder[];
   pendingLogCount: number;
 }
 

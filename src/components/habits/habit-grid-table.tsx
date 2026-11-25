@@ -60,7 +60,7 @@ export function HabitGridTable({
   const monthStart = monthDays[0] ?? `${month}-01`;
   const monthEnd = monthDays[monthDays.length - 1] ?? `${month}-31`;
   const byKey = new Map(logs.map((log) => [logKey(log), log]));
-  const getLog = (habitId: string, date: string) => byKey.get(`${date}_${habitId}`);
+  const getLog = (habitId: string, date: string) => byKey.get(`${date}_${habitId}_1`);
 
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-card">
@@ -76,7 +76,7 @@ export function HabitGridTable({
               </span>
               <div className="flex">
                 {week.map((day) => (
-                  <div key={day.toISOString()} className="w-9 text-center">
+                  <div key={day.toISOString()} className="w-11 text-center">
                     <div className="text-[11px] font-semibold tabular">{format(day, "d")}</div>
                     <div className="text-[9px] text-muted-foreground">{format(day, "EEE").charAt(0)}</div>
                   </div>
@@ -123,7 +123,7 @@ export function HabitGridTable({
                         aria-label={`${habit.name} on ${format(day, "MMM d")}: ${statusIcon(log?.status)}${scheduledSet.has(date) ? "" : " (not scheduled)"} (tap for ${statusIcon(next)})`}
                         title={`${format(day, "MMM d")} · ${statusIcon(log?.status)}${scheduledSet.has(date) ? "" : " · not scheduled"}`}
                         className={cn(
-                          "m-0.5 flex size-8 items-center justify-center rounded border text-[13px] font-bold transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-ring"
+                          "tap-target m-0.5 flex items-center justify-center rounded border text-[13px] font-bold transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-ring"
                         )}
                         style={{
                           borderColor: color,

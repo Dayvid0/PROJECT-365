@@ -8,12 +8,15 @@ import type {
   BootstrapData,
   Habit,
   HabitLog,
+  HabitReminder,
   MonthlySnapshot,
   UserProfile,
 } from "@/domain/types";
+import type { WorkspaceBackupInput } from "@/domain/backup";
 import type {
   CreateHabitInput,
   CreateScheduleVersionInput,
+  HabitReminderInput,
   PreferencesPatchSchemaType,
   ProfilePatchInput,
   ScheduleExceptionInput,
@@ -46,9 +49,11 @@ export function useBootstrap(userId: string) {
 export function useHabits(userId: string) {
   const query = useBootstrap(userId);
   return {
+    user: query.data?.user,
     habits: query.data?.habits ?? [],
     schedules: query.data?.schedules ?? [],
     exceptions: query.data?.exceptions ?? [],
+    reminders: query.data?.reminders ?? [],
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,
@@ -192,6 +197,73 @@ export function useUpsertLogs(userId: string) {
         queryKey: workspaceKeys.bootstrap(userId),
       });
     },
+  });
+}
+
+export interface DeleteLogVariables {
+  month: string;
+  habitId: string;
+  date: string;
+  occurrence?: number;
+}
+
+export function useDeleteLog(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ habitId, date, occurrence }: DeleteLogVariables) =>
+      apiFetch<{ deleted: boolean }>(
+        `/api/workspace/logs?habitId=${encodeURIComponent(habitId)}&date=${encodeURIComponent(date)}&occurrence=${occurrence ?? 1}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: (_result, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: workspaceKeys.logs(userId, variables.month),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: workspaceKeys.snapshot(userId, variables.month),
+      });
+      void queryClient.invalidateQueries({ queryKey: workspaceKeys.analytics(userId, 12) });
+      toast.success("Check-in removed", { description: "That day is pending again." });
+    },
+    onError: (error) => toast.error("Could not remove check-in", { description: errorMessage(error) }),
+  });
+}
+
+export interface UpsertReminderVariables {
+  habitId: string;
+  reminder: HabitReminderInput;
+}
+
+export function useUpsertReminder(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ habitId, reminder }: UpsertReminderVariables) => {
+      return apiFetch<{ reminder: HabitReminder }>("/api/workspace/reminders", {
+        method: "PUT",
+        body: JSON.stringify({ habitId, reminder }),
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: workspaceKeys.bootstrap(userId) });
+      toast.success("Reminder saved");
+    },
+    onError: (error) => toast.error("Could not save reminder", { description: errorMessage(error) }),
+  });
+}
+
+export function useRestoreBackup(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (backup: WorkspaceBackupInput) =>
+      apiFetch<{ restored: boolean }>("/api/workspace/import", {
+        method: "POST",
+        body: JSON.stringify(backup),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: workspaceKeys.userRoot(userId) });
+      toast.success("Backup restored");
+    },
+    onError: (error) => toast.error("Could not restore backup", { description: errorMessage(error) }),
   });
 }
 

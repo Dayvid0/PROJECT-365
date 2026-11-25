@@ -7,11 +7,14 @@ import {
   scheduledOpportunitiesForRange,
 } from "@/domain/schedule";
 import { buildDefaultHabits } from "@/domain/defaults";
+import { buildWorkspaceBackup } from "@/domain/backup";
+import type { WorkspaceBackupInput } from "@/domain/backup";
 import type {
   AnalyticsRangeData,
   BootstrapData,
   Habit,
   HabitLog,
+  HabitReminder,
   HabitSchedule,
   MonthlySnapshot,
   ScheduleException,
@@ -21,6 +24,8 @@ import type {
 import type {
   CreateHabitInput,
   CreateScheduleVersionInput,
+  DeleteLogInput,
+  HabitReminderInput,
   PreferencesPatchSchemaType,
   ProfilePatchInput,
   ScheduleExceptionInput,
@@ -30,6 +35,7 @@ import type {
 import { db, type DbExecutor } from "@/server/db";
 import {
   habitLogs,
+  habitReminders,
   habitScheduleExceptions,
   habitScheduleVersions,
   habits,
@@ -37,6 +43,7 @@ import {
   userPreferences,
   users,
   type HabitLogRow,
+  type HabitReminderRow,
   type HabitRow,
   type HabitScheduleVersionRow,
   type ScheduleExceptionRow,
@@ -113,6 +120,19 @@ function toException(row: ScheduleExceptionRow): ScheduleException {
   };
 }
 
+function toReminder(row: HabitReminderRow): HabitReminder {
+  return {
+    id: row.id,
+    habitId: row.habitId,
+    enabled: row.enabled,
+    time: row.time,
+    weekdays: row.weekdays ?? [],
+    snoozeMinutes: row.snoozeMinutes,
+    stopAfterCompletion: row.stopAfterCompletion,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
 function logId(userId: string, habitId: string, date: string, occurrence: number): string {
   return `${userId}:${habitId}:${date}:${occurrence}`;
 }
@@ -160,6 +180,15 @@ async function listExceptions(userId: string, executor: DbExecutor = db): Promis
   return rows.map(toException);
 }
 
+async function listReminders(userId: string, executor: DbExecutor = db): Promise<HabitReminder[]> {
+  const rows = await executor
+    .select()
+    .from(habitReminders)
+    .where(eq(habitReminders.userId, userId))
+    .orderBy(habitReminders.time);
+  return rows.map(toReminder);
+}
+
 async function listLogsForMonth(
   userId: string,
   month: string,
@@ -195,6 +224,14 @@ async function deleteAllSnapshots(userId: string, executor: DbExecutor = db): Pr
   await executor.delete(monthlySnapshots).where(eq(monthlySnapshots.userId, userId));
 }
 
+async function listAllLogsForUser(userId: string, executor: DbExecutor = db): Promise<HabitLog[]> {
+  const rows = await executor
+    .select()
+    .from(habitLogs)
+    .where(eq(habitLogs.userId, userId));
+  return rows.map(toLog);
+}
+
 async function getProfile(userId: string): Promise<UserProfile> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) throw new NotFoundError("Account not found.");
@@ -214,6 +251,10 @@ async function getProfile(userId: string): Promise<UserProfile> {
     theme: preference?.theme ?? "dark",
     notificationTime: preference?.notificationTime ?? "08:00",
     onboardingCompleted: preference?.onboardingCompleted ?? false,
+    streakPolicy: preference?.streakPolicy ?? "strict",
+    remindersEnabled: preference?.remindersEnabled ?? false,
+    quietHoursStart: preference?.quietHoursStart ?? "22:00",
+    quietHoursEnd: preference?.quietHoursEnd ?? "07:00",
     createdAt: user.createdAt.toISOString(),
   };
 }
@@ -338,19 +379,22 @@ export const workspaceRepository = {
   listHabits,
   listSchedules,
   listExceptions,
+  listReminders,
 
   async getBootstrap(userId: string): Promise<BootstrapData> {
-    const [user, habitList, scheduleList, exceptionList] = await Promise.all([
+    const [user, habitList, scheduleList, exceptionList, reminderList] = await Promise.all([
       getProfile(userId),
       listHabits(userId),
       listSchedules(userId),
       listExceptions(userId),
+      listReminders(userId),
     ]);
     return {
       user,
       habits: habitList,
       schedules: scheduleList,
       exceptions: exceptionList,
+      reminders: reminderList,
       pendingLogCount: 0,
     };
   },
@@ -542,6 +586,70 @@ export const workspaceRepository = {
     await deleteSnapshots(userId, [...new Set(logs.map((log) => log.date.slice(0, 7)))]);
   },
 
+  /** Explicit undo: removes a check-in so the scheduled day returns to pending. */
+  async deleteLog(userId: string, input: DeleteLogInput): Promise<void> {
+    const result = await db
+      .delete(habitLogs)
+      .where(
+        and(
+          eq(habitLogs.userId, userId),
+          eq(habitLogs.habitId, input.habitId),
+          eq(habitLogs.date, input.date),
+          eq(habitLogs.occurrence, input.occurrence ?? 1)
+        )
+      )
+      .returning({ id: habitLogs.id });
+    if (!result.length) throw new NotFoundError("Check-in not found.");
+    await deleteSnapshots(userId, [input.date.slice(0, 7)]);
+  },
+
+  async upsertReminder(
+    userId: string,
+    habitId: string,
+    input: HabitReminderInput
+  ): Promise<HabitReminder> {
+    const owned = await db
+      .select({ id: habits.id })
+      .from(habits)
+      .where(and(eq(habits.id, habitId), eq(habits.userId, userId)))
+      .limit(1);
+    if (!owned.length) throw new NotFoundError("Habit not found.");
+
+    const [existing] = await db
+      .select()
+      .from(habitReminders)
+      .where(
+        and(eq(habitReminders.userId, userId), eq(habitReminders.habitId, habitId))
+      )
+      .limit(1);
+    const now = new Date();
+    const values = {
+      userId,
+      habitId,
+      enabled: input.enabled,
+      time: input.time,
+      weekdays: input.weekdays,
+      snoozeMinutes: input.snoozeMinutes,
+      stopAfterCompletion: input.stopAfterCompletion,
+      updatedAt: now,
+    };
+
+    if (existing) {
+      const [updated] = await db
+        .update(habitReminders)
+        .set(values)
+        .where(eq(habitReminders.id, existing.id))
+        .returning();
+      return toReminder(updated!);
+    }
+
+    const [created] = await db
+      .insert(habitReminders)
+      .values({ id: ulid(), ...values, createdAt: now })
+      .returning();
+    return toReminder(created!);
+  },
+
   async getSnapshot(userId: string, month: string): Promise<MonthlySnapshot> {
     const [existing] = await db
       .select()
@@ -626,13 +734,7 @@ export const workspaceRepository = {
     };
   },
 
-  async listAllLogs(userId: string): Promise<HabitLog[]> {
-    const rows = await db
-      .select()
-      .from(habitLogs)
-      .where(eq(habitLogs.userId, userId));
-    return rows.map(toLog);
-  },
+  listAllLogs: listAllLogsForUser,
 
   async completeOnboarding(userId: string, mode: "defaults" | "scratch"): Promise<Habit[]> {
     await ensurePreferences(userId);
@@ -706,9 +808,174 @@ export const workspaceRepository = {
       ...(patch.onboardingCompleted !== undefined
         ? { onboardingCompleted: patch.onboardingCompleted }
         : {}),
+      ...(patch.streakPolicy !== undefined ? { streakPolicy: patch.streakPolicy } : {}),
+      ...(patch.remindersEnabled !== undefined ? { remindersEnabled: patch.remindersEnabled } : {}),
+      ...(patch.quietHoursStart !== undefined ? { quietHoursStart: patch.quietHoursStart } : {}),
+      ...(patch.quietHoursEnd !== undefined ? { quietHoursEnd: patch.quietHoursEnd } : {}),
       updatedAt: new Date(),
     }).where(eq(userPreferences.userId, userId));
     return getProfile(userId);
+  },
+
+  async getWorkspaceBackup(userId: string) {
+    const [profile, habitList, scheduleList, exceptionList, logList, reminderList] =
+      await Promise.all([
+        getProfile(userId),
+        listHabits(userId),
+        listSchedules(userId),
+        listExceptions(userId),
+        listAllLogsForUser(userId),
+        listReminders(userId),
+      ]);
+    return buildWorkspaceBackup({
+      profile,
+      habits: habitList,
+      schedules: scheduleList,
+      exceptions: exceptionList,
+      logs: logList,
+      reminders: reminderList,
+    });
+  },
+
+  /**
+   * Full restore replaces the current workspace. All writes happen in one
+   * transaction and habit ids are remapped so no stale references survive.
+   */
+  async restoreWorkspace(userId: string, backup: WorkspaceBackupInput): Promise<void> {
+    await ensurePreferences(userId);
+    const seenHabitIds = new Set<string>();
+    for (const habit of backup.habits) {
+      if (seenHabitIds.has(habit.id)) {
+        throw new ValidationError("Backup contains duplicate habit ids.");
+      }
+      seenHabitIds.add(habit.id);
+    }
+    for (const collection of [backup.schedules, backup.exceptions, backup.logs, backup.reminders]) {
+      for (const item of collection) {
+        if (!seenHabitIds.has(item.habitId)) {
+          throw new ValidationError("Backup contains a record for an unknown habit.");
+        }
+      }
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.delete(habitLogs).where(eq(habitLogs.userId, userId));
+      await tx.delete(habitReminders).where(eq(habitReminders.userId, userId));
+      await tx.delete(habitScheduleExceptions).where(eq(habitScheduleExceptions.userId, userId));
+      await tx.delete(habitScheduleVersions).where(eq(habitScheduleVersions.userId, userId));
+      await tx.delete(monthlySnapshots).where(eq(monthlySnapshots.userId, userId));
+      await tx.delete(habits).where(eq(habits.userId, userId));
+
+      const habitIdMap = new Map<string, string>();
+      for (const habit of backup.habits) {
+        const id = ulid();
+        habitIdMap.set(habit.id, id);
+        await tx.insert(habits).values({
+          id,
+          userId,
+          name: habit.name,
+          description: habit.description,
+          category: habit.category,
+          color: habit.color,
+          position: habit.order,
+          isActive: habit.isActive,
+          kind: habit.kind,
+          targetValue: habit.targetValue,
+          unit: habit.unit,
+          targetDurationSeconds: habit.targetDurationSeconds,
+          createdAt: new Date(habit.createdAt),
+          updatedAt: new Date(habit.createdAt),
+        });
+      }
+
+      for (const schedule of backup.schedules) {
+        await tx.insert(habitScheduleVersions).values({
+          id: ulid(),
+          userId,
+          habitId: habitIdMap.get(schedule.habitId)!,
+          version: schedule.version,
+          effectiveFrom: schedule.effectiveFrom,
+          effectiveTo: schedule.effectiveTo,
+          cadence: schedule.cadence,
+          weekdays: schedule.weekdays,
+          timesPerWeek: schedule.timesPerWeek,
+          intervalDays: schedule.intervalDays,
+          monthDay: schedule.monthDay,
+          timesPerDay: schedule.timesPerDay,
+          targetValue: schedule.targetValue,
+          unit: schedule.unit,
+          targetDurationSeconds: schedule.targetDurationSeconds,
+          dayStartMinute: schedule.dayStartMinute,
+          timezone: schedule.timezone,
+          anchorDate: schedule.anchorDate,
+          createdAt: new Date(schedule.createdAt),
+        });
+      }
+
+      for (const item of backup.exceptions) {
+        await tx.insert(habitScheduleExceptions).values({
+          id: ulid(),
+          userId,
+          habitId: habitIdMap.get(item.habitId)!,
+          startDate: item.startDate,
+          endDate: item.endDate,
+          kind: item.kind,
+          reason: item.reason,
+          createdAt: new Date(item.createdAt),
+        });
+      }
+
+      const now = new Date();
+      for (const log of backup.logs) {
+        const habitId = habitIdMap.get(log.habitId)!;
+        const occurrence = log.occurrence ?? 1;
+        await tx.insert(habitLogs).values({
+          id: logId(userId, habitId, log.date, occurrence),
+          userId,
+          habitId,
+          date: log.date,
+          status: log.status,
+          occurrence,
+          value: log.value,
+          unit: log.unit,
+          note: log.note,
+          source: log.source ?? "manual",
+          startedAt: log.startedAt ? new Date(log.startedAt) : null,
+          endedAt: log.endedAt ? new Date(log.endedAt) : null,
+          createdAt: log.createdAt ? new Date(log.createdAt) : now,
+          updatedAt: new Date(log.updatedAt),
+          editedAt: log.editedAt ? new Date(log.editedAt) : null,
+          isSkip: false,
+          plannedBreak: false,
+        });
+      }
+
+      for (const reminder of backup.reminders) {
+        await tx.insert(habitReminders).values({
+          id: ulid(),
+          userId,
+          habitId: habitIdMap.get(reminder.habitId)!,
+          enabled: reminder.enabled,
+          time: reminder.time,
+          weekdays: reminder.weekdays,
+          snoozeMinutes: reminder.snoozeMinutes,
+          stopAfterCompletion: reminder.stopAfterCompletion,
+          createdAt: new Date(reminder.createdAt),
+          updatedAt: now,
+        });
+      }
+
+      await tx.update(users)
+        .set({ timezone: backup.profile.timezone, updatedAt: now })
+        .where(eq(users.id, userId));
+      await tx.update(userPreferences)
+        .set({
+          streakPolicy: backup.profile.streakPolicy,
+          notificationTime: backup.profile.notificationTime,
+          updatedAt: now,
+        })
+        .where(eq(userPreferences.userId, userId));
+    });
   },
 
   async nextHabitPosition(userId: string): Promise<number> {

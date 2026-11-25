@@ -15,6 +15,8 @@ import type {
   ScheduleException,
   HabitSchedule,
   ScheduledOpportunity,
+  StreakPolicy,
+  StreakSummary,
 } from "./types";
 import {
   scheduledOpportunitiesForRange,
@@ -176,6 +178,47 @@ export function longestStreak(logs: HabitLog[], scheduledDates?: string[]): numb
     previous = current;
   }
   return longest;
+}
+
+/**
+ * Streak presentation is a user choice, not an implicit judgment. "target"
+ * measures consistency across recent scheduled opportunities; "off" hides
+ * streaks while keeping all completion history intact.
+ */
+export function streakSummary(
+  logs: HabitLog[],
+  scheduledDates: string[],
+  policy: StreakPolicy,
+  today: Date = new Date()
+): StreakSummary {
+  if (policy === "off") {
+    return { current: 0, best: 0, visible: false, label: "Streaks hidden" };
+  }
+
+  if (policy === "target") {
+    const dates = [...new Set(scheduledDates)].filter((date) => date <= format(today, "yyyy-MM-dd")).sort();
+    const statuses = statusByDate(logs);
+    const complete = (date: string) => statuses.get(date) === 1;
+    const window = Math.min(7, dates.length);
+    const current = dates.slice(-window).filter(complete).length;
+    let best = 0;
+    for (let index = 0; index <= dates.length - window; index += 1) {
+      best = Math.max(best, dates.slice(index, index + window).filter(complete).length);
+    }
+    return {
+      current,
+      best,
+      visible: true,
+      label: `Complete days in the last ${window} scheduled opportunities`,
+    };
+  }
+
+  return {
+    current: currentStreak(logs, today, scheduledDates),
+    best: longestStreak(logs, scheduledDates),
+    visible: true,
+    label: "Consecutive scheduled days",
+  };
 }
 
 export interface SnapshotOptions {

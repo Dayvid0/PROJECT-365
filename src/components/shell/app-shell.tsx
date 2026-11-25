@@ -20,6 +20,7 @@ import { useWorkspaceUIStore } from "@/stores/workspace-ui-store";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { href: "/app/today", label: "Today", icon: CalendarCheck2 },
   { href: "/app", label: "Dashboard", icon: CalendarCheck2 },
   { href: "/app/grid", label: "Grid", icon: Grid3X3 },
   { href: "/app/habits", label: "Habits", icon: ListChecks },
@@ -44,6 +45,12 @@ export function AppShell({
 
   return (
     <div className="min-h-screen">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
+      >
+        Skip to main content
+      </a>
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-56 flex-col border-r border-border bg-card px-3 py-5 md:flex">
         <Link href="/app" className="mb-8 flex items-center gap-2 px-2 text-sm font-bold">
           <CalendarCheck2 className="size-5 text-primary" />
@@ -104,7 +111,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl px-4 py-6 pb-28 md:px-8 md:pb-10">
+        <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-6xl px-4 py-6 pb-28 md:px-8 md:pb-10">
           {children}
         </main>
       </div>

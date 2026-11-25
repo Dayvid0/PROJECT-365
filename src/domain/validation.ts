@@ -5,6 +5,7 @@ import {
   HABIT_CATEGORIES,
   HABIT_KINDS,
   SCHEDULE_EXCEPTION_KINDS,
+  STREAK_POLICIES,
 } from "@/lib/constants";
 
 export const monthSchema = z
@@ -157,6 +158,24 @@ export const upsertLogsSchema = z
   .min(1, "At least one log is required.")
   .max(10_000, "Too many logs in one request.");
 
+export const timeSchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Time must be HH:mm.");
+
+export const deleteLogSchema = z.object({
+  habitId: z.string().min(1),
+  date: dateSchema,
+  occurrence: z.coerce.number().int().min(1).max(100).default(1),
+});
+
+export const habitReminderSchema = z.object({
+  enabled: z.boolean().default(true),
+  time: timeSchema.default("08:00"),
+  weekdays: weekdaysSchema.default([]),
+  snoozeMinutes: z.number().int().min(0).max(240).default(10),
+  stopAfterCompletion: z.boolean().default(true),
+});
+
 export const profilePatchSchema = z
   .object({
     name: z.string().trim().min(1).max(120).optional(),
@@ -167,11 +186,12 @@ export const profilePatchSchema = z
 export const preferencesPatchSchema = z
   .object({
     theme: z.enum(["light", "dark"]).optional(),
-    notificationTime: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Time must be HH:mm.")
-      .optional(),
+    notificationTime: timeSchema.optional(),
     onboardingCompleted: z.boolean().optional(),
+    streakPolicy: z.enum(STREAK_POLICIES).optional(),
+    remindersEnabled: z.boolean().optional(),
+    quietHoursStart: timeSchema.optional(),
+    quietHoursEnd: timeSchema.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, "No changes supplied.");
 
@@ -186,3 +206,5 @@ export type CreateScheduleVersionInput = z.infer<typeof createScheduleVersionSch
 export type ScheduleExceptionInput = z.infer<typeof scheduleExceptionSchema>;
 export type ProfilePatchInput = z.infer<typeof profilePatchSchema>;
 export type PreferencesPatchSchemaType = z.infer<typeof preferencesPatchSchema>;
+export type DeleteLogInput = z.infer<typeof deleteLogSchema>;
+export type HabitReminderInput = z.infer<typeof habitReminderSchema>;

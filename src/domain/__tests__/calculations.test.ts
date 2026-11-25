@@ -9,6 +9,7 @@ import {
   habitCompletionRate,
   resolveStatus,
   shiftMonth,
+  streakSummary,
   weeklyAverage,
 } from "../calculations";
 import type { Habit, HabitLog, HabitSchedule } from "../types";
@@ -112,6 +113,42 @@ describe("rates and streaks", () => {
 
   it("formats ratios with one decimal", () => {
     expect(formatPercent(0.727)).toBe("72.7%");
+  });
+
+  it("hides streaks entirely when the policy is off", () => {
+    const today = new Date("2026-03-03T12:00:00.000Z");
+    expect(streakSummary([log("2026-03-03")], ["2026-03-03"], "off", today)).toEqual({
+      current: 0,
+      best: 0,
+      visible: false,
+      label: "Streaks hidden",
+    });
+  });
+
+  it("counts recent scheduled opportunities under the gentle policy", () => {
+    const today = new Date("2026-03-03T12:00:00.000Z");
+    const dates = ["2026-02-26", "2026-02-27", "2026-02-28", "2026-03-01", "2026-03-02", "2026-03-03"];
+    const logs = [
+      log("2026-02-26", "a", 0),
+      log("2026-02-27"),
+      log("2026-03-01"),
+      log("2026-03-02"),
+    ];
+    expect(streakSummary(logs, dates, "target", today)).toMatchObject({
+      current: 3,
+      best: 3,
+      visible: true,
+    });
+  });
+
+  it("keeps strict streaks based on consecutive scheduled days", () => {
+    const today = new Date("2026-03-03T12:00:00.000Z");
+    const dates = ["2026-03-01", "2026-03-02", "2026-03-03"];
+    expect(streakSummary([log("2026-03-02"), log("2026-03-03")], dates, "strict", today)).toMatchObject({
+      current: 2,
+      best: 2,
+      visible: true,
+    });
   });
 });
 
