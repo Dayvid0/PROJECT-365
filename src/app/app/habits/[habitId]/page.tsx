@@ -1,0 +1,167 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { format } from "date-fns";
+import { ArrowLeft, Flame } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useWorkspaceUserId } from "@/components/providers/workspace-context";
+import {
+  currentStreak,
+  formatPercent,
+  getMonthDayGrid,
+  habitCompletionRate,
+  shiftMonth,
+  toMonthString,
+} from "@/domain/calculations";
+import type { HabitStatus } from "@/domain/types";
+import { useAnalytics, useHabits } from "@/lib/hooks/use-workspace";
+
+const STATUS_COLOR: Record<HabitStatus | "none", string> = {
+  1: "#22C55E",
+  0.5: "#F59E0B",
+  0: "#EF4444",
+  none: "#2D2D4A",
+};
+
+export default function HabitDetailPage() {
+  const params = useParams<{ habitId: string }>();
+  const habitId = params.habitId;
+  const userId = useWorkspaceUserId();
+  const { habits } = useHabits(userId);
+  const { data, isLoading } = useAnalytics(userId, 12);
+
+  const habit = habits.find((candidate) => candidate.id === habitId);
+  const allLogs = (data?.logs ?? []).filter((log) => log.habitId === habitId);
+  const logMap = new Map(allLogs.map((log) => [log.date, log.status]));
+
+  const currentMonth = toMonthString(new Date());
+  const previousMonth = shiftMonth(currentMonth, -1);
+  const currentRate = habitCompletionRate(
+    allLogs.filter((log) => log.date.startsWith(`${currentMonth}-`))
+  );
+  const previousRate = habitCompletionRate(
+    allLogs.filter((log) => log.date.startsWith(`${previousMonth}-`))
+  );
+  const trend = currentRate - previousRate;
+  const streak = currentStreak(allLogs);
+  const months = Array.from({ length: 12 }, (_, index) => shiftMonth(currentMonth, index - 11));
+  const breakdown = Array.from({ length: 6 }, (_, index) => shiftMonth(currentMonth, -index));
+
+  if (!habit) {
+    return (
+      <Card className="mx-auto max-w-lg border-border bg-card">
+        <CardHeader>
+          <CardTitle>Habit not found</CardTitle>
+          <CardDescription>It may have been removed or belongs to another account.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild><Link href="/app/habits">Back to habits</Link></Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Button variant="ghost" size="sm" asChild>
+        <Link href="/app/habits"><ArrowLeft className="size-4" /> Back to habits</Link>
+      </Button>
+
+      <Card className="border-border bg-card" style={{ borderTopColor: habit.color }}>
+        <CardHeader>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="capitalize">{habit.category}</Badge>
+            <span className="size-3 rounded-full" style={{ backgroundColor: habit.color }} />
+          </div>
+          <CardTitle className="text-2xl">{habit.name}</CardTitle>
+          <CardDescription>Created {format(new Date(habit.createdAt), "MMM d, yyyy")}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <p className="text-2xl font-extrabold tabular text-primary">{formatPercent(currentRate)}</p>
+            <p className="text-xs text-muted-foreground">This month</p>
+          </div>
+          <div>
+            <p className={`text-2xl font-extrabold tabular ${trend >= 0 ? "text-[color:var(--color-complete)]" : "text-[color:var(--color-missed)]"}`}>
+              {trend >= 0 ? "↑" : "↓"} {Math.abs(trend * 100).toFixed(1)}%
+            </p>
+            <p className="text-xs text-muted-foreground">vs last month</p>
+          </div>
+          <div>
+            <p className="flex items-center gap-1 text-2xl font-extrabold tabular text-[color:var(--color-partial)]">
+              <Flame className="size-5" /> {streak}
+            </p>
+            <p className="text-xs text-muted-foreground">day streak</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle>12-month heatmap</CardTitle>
+          <CardDescription>Each square is one day. Darker means no log.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {months.map((month) => (
+              <div key={month} className="shrink-0">
+                <p className="mb-1 text-[10px] font-semibold uppercase text-muted-foreground">
+                  {format(new Date(`${month}-01T00:00:00`), "MMM")}
+                </p>
+                <div className="grid grid-flow-col grid-rows-7 gap-[2px]">
+                  {getMonthDayGrid(month).flat().map((day) => {
+                    const date = format(day, "yyyy-MM-dd");
+                    const status = logMap.get(date);
+                    return (
+                      <span
+                        key={date}
+                        className="size-2 rounded-[2px]"
+                        title={`${date}: ${status === undefined ? "no log" : status}`}
+                        style={{ backgroundColor: STATUS_COLOR[status ?? "none"] }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle>Monthly breakdown</CardTitle>
+          <CardDescription>Completion rate across the last six months.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {isLoading ? <p className="text-sm text-muted-foreground">Loading history…</p> : null}
+          {breakdown.map((month) => {
+            const rate = habitCompletionRate(
+              allLogs.filter((log) => log.date.startsWith(`${month}-`))
+            );
+            return (
+              <div key={month} className="grid grid-cols-[5rem_1fr_4rem] items-center gap-3">
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(`${month}-01T00:00:00`), "MMM yyyy")}
+                </span>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full" style={{ width: `${rate * 100}%`, backgroundColor: habit.color }} />
+                </div>
+                <span className="text-right text-xs font-semibold tabular">{formatPercent(rate)}</span>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

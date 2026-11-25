@@ -1,0 +1,136 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  BarChart3,
+  CalendarCheck2,
+  CloudOff,
+  Grid3X3,
+  ListChecks,
+  LogOut,
+  Settings,
+} from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
+import { useSignOut } from "@/lib/hooks/use-sign-out";
+import { useBootstrap, useOnlineStatus } from "@/lib/hooks/use-workspace";
+import { useWorkspaceUserId } from "@/components/providers/workspace-context";
+import { useWorkspaceUIStore } from "@/stores/workspace-ui-store";
+import { cn } from "@/lib/utils";
+
+const NAV = [
+  { href: "/app", label: "Dashboard", icon: CalendarCheck2 },
+  { href: "/app/grid", label: "Grid", icon: Grid3X3 },
+  { href: "/app/habits", label: "Habits", icon: ListChecks },
+  { href: "/app/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/app/settings", label: "Settings", icon: Settings },
+] as const;
+
+export function AppShell({
+  displayName,
+  children,
+}: {
+  displayName: string;
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const userId = useWorkspaceUserId();
+  const { data: bootstrap } = useBootstrap(userId);
+  const signOut = useSignOut();
+  const isOnline = useOnlineStatus();
+  const pendingCount = useWorkspaceUIStore((state) => state.pendingLogs.length);
+  const displayNameNow = bootstrap?.user?.name ?? displayName;
+
+  return (
+    <div className="min-h-screen">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-56 flex-col border-r border-border bg-card px-3 py-5 md:flex">
+        <Link href="/app" className="mb-8 flex items-center gap-2 px-2 text-sm font-bold">
+          <CalendarCheck2 className="size-5 text-primary" />
+          PROJECT_365
+        </Link>
+
+        <nav className="flex flex-1 flex-col gap-1" aria-label="Main navigation">
+          {NAV.map(({ href, label, icon: Icon }) => {
+            const active = href === "/app" ? pathname === href : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Icon className="size-4" />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="space-y-2 border-t border-border pt-4">
+          <div className="px-2 text-xs text-muted-foreground">Signed in as</div>
+          <div className="truncate px-2 text-sm font-medium">{displayNameNow}</div>
+          <Button variant="outline" className="w-full justify-start" onClick={signOut}>
+            <LogOut className="size-4" /> Sign out
+          </Button>
+        </div>
+      </aside>
+
+      <div className="md:pl-56">
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-3 border-b border-border bg-background/90 px-4 backdrop-blur md:px-8">
+          <div className="flex items-center gap-2 text-sm font-bold md:hidden">
+            <CalendarCheck2 className="size-5 text-primary" />
+            PROJECT_365
+          </div>
+          <div className="hidden text-xs text-muted-foreground md:block">
+            {isOnline ? "All changes sync automatically" : "Working offline — changes are saved locally"}
+          </div>
+          <div className="flex items-center gap-2">
+            {!isOnline || pendingCount > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                <CloudOff className="size-3" />
+                {pendingCount > 0 ? `${pendingCount} pending` : "Offline"}
+              </span>
+            ) : null}
+            <ThemeToggle compact />
+            <Button variant="ghost" size="icon" className="md:hidden" aria-label="Sign out" onClick={signOut}>
+              <LogOut className="size-4" />
+            </Button>
+          </div>
+        </header>
+
+        <main className="mx-auto w-full max-w-6xl px-4 py-6 pb-28 md:px-8 md:pb-10">
+          {children}
+        </main>
+      </div>
+
+      <nav
+        className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-card px-2 py-2 md:hidden"
+        aria-label="Mobile navigation"
+      >
+        {NAV.map(({ href, label, icon: Icon }) => {
+          const active = href === "/app" ? pathname === href : pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex flex-1 flex-col items-center gap-1 rounded-md py-1 text-[10px] font-medium",
+                active ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              <Icon className="size-5" />
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}

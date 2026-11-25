@@ -1,0 +1,46 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# Next.js
+/.next/
+/out/
+/build
+
+# Testing & Coverage
+/coverage
+
+# Local environment & secrets
+.env
+.env.*
+!.env.example
+
+# Local SQLite / libSQL databases
+local.db
+local.db-*
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Certificates & keys
+*.pem
+
+# Vercel
+/.vercel
+
+# OS & Editor noise
+.DS_Store
+Thumbs.db
+
+# Debug logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# TypeScript & generated Next.js types
+*.tsbuildinfo
+next-env.d.ts
