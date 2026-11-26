@@ -11,6 +11,7 @@ import {
   ListChecks,
   LogOut,
   Settings,
+  Users,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const NAV = [
   { href: "/app/habits", label: "Habits", icon: ListChecks },
   { href: "/app/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/app/accountability", label: "Accountability", icon: HeartHandshake },
+  { href: "/app/circles", label: "Circles", icon: Users },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ] as const;
 

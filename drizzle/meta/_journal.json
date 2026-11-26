@@ -43,6 +43,13 @@
       "when": 1795684968721,
       "tag": "0005_colorful_clint_barton",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1795701503500,
+      "tag": "0006_perpetual_alex_wilder",
+      "breakpoints": true
     }
   ]
 }

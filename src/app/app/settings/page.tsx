@@ -380,6 +380,21 @@ export default function SettingsPage() {
 
       <Card className="border-border bg-card">
         <CardHeader>
+          <CardTitle>Circles</CardTitle>
+          <CardDescription>
+            Invite-only groups with their own members and field-level grants. Joining shares nothing
+            by itself, and there is no search or discovery.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" asChild>
+            <Link href="/app/circles">Manage circles</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border bg-card">
+        <CardHeader>
           <CardTitle>Privacy</CardTitle>
           <CardDescription>
             What is stored, what syncs offline, how sharing works, and what exports include — in

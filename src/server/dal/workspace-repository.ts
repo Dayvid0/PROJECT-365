@@ -35,6 +35,9 @@ import type {
 import { db, type DbExecutor } from "@/server/db";
 import {
   accounts,
+  circleInvites,
+  circleMemberships,
+  circles,
   habitLogs,
   habitReminders,
   habitScheduleExceptions,
@@ -1006,6 +1009,12 @@ export const workspaceRepository = {
    */
   async deleteAccount(userId: string, email: string): Promise<void> {
     await db.transaction(async (tx) => {
+      const ownedCircles = await tx
+        .select({ id: circles.id })
+        .from(circles)
+        .where(eq(circles.ownerUserId, userId));
+      const ownedCircleIds = ownedCircles.map((row) => row.id);
+
       await tx.delete(habitLogs).where(eq(habitLogs.userId, userId));
       await tx.delete(habitReminders).where(eq(habitReminders.userId, userId));
       await tx.delete(habitScheduleExceptions).where(eq(habitScheduleExceptions.userId, userId));
@@ -1014,9 +1023,21 @@ export const workspaceRepository = {
       await tx.delete(weeklyReviews).where(eq(weeklyReviews.userId, userId));
       await tx.delete(userPreferences).where(eq(userPreferences.userId, userId));
 
+      await tx.delete(circleInvites).where(
+        or(
+          eq(circleInvites.inviterUserId, userId),
+          eq(circleInvites.inviteeUserId, userId),
+          eq(circleInvites.inviteeEmail, email)
+        )
+      );
+      await tx.delete(circleMemberships).where(eq(circleMemberships.userId, userId));
       await tx.delete(shareGrants).where(
         or(eq(shareGrants.userId, userId), eq(shareGrants.recipientUserId, userId))
       );
+      if (ownedCircleIds.length) {
+        await tx.delete(circleInvites).where(inArray(circleInvites.circleId, ownedCircleIds));
+        await tx.delete(shareGrants).where(inArray(shareGrants.circleId, ownedCircleIds));
+      }
       await tx.delete(partnerInvites).where(
         or(
           eq(partnerInvites.inviterUserId, userId),
@@ -1030,6 +1051,16 @@ export const workspaceRepository = {
       await tx.delete(safetyReports).where(
         or(eq(safetyReports.reporterUserId, userId), eq(safetyReports.targetUserId, userId))
       );
+      if (ownedCircleIds.length) {
+        await tx.delete(safetyControls).where(inArray(safetyControls.circleId, ownedCircleIds));
+        await tx.delete(safetyReports).where(
+          and(
+            eq(safetyReports.targetType, "circle"),
+            inArray(safetyReports.targetId, ownedCircleIds)
+          )
+        );
+        await tx.delete(circles).where(inArray(circles.id, ownedCircleIds));
+      }
 
       await tx.delete(habits).where(eq(habits.userId, userId));
       await tx.delete(sessions).where(eq(sessions.userId, userId));

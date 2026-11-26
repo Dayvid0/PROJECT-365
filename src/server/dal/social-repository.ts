@@ -1,5 +1,5 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
-import { buildSharePreview, revokeGrant } from "@/domain/sharing";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { revokeGrant } from "@/domain/sharing";
 import type {
   SafetyControl,
   SafetyReport,
@@ -13,39 +13,25 @@ import type {
 } from "@/domain/validation";
 import { db } from "@/server/db";
 import {
-  habitLogs,
+  circleMemberships,
   habits,
   safetyControls,
   safetyReports,
   shareGrants,
   users,
 } from "@/server/db/schema";
+import { circleRepository } from "./circle-repository";
 import { NotFoundError, ValidationError } from "./errors";
 import { partnerInviteRepository } from "./partner-invite-repository";
+import {
+  loadSharePreviewData,
+  previewFromGrant,
+  toShareGrant,
+} from "./share-projection";
 
 type ShareGrantRow = typeof shareGrants.$inferSelect;
 type SafetyControlRow = typeof safetyControls.$inferSelect;
 type SafetyReportRow = typeof safetyReports.$inferSelect;
-
-function toGrant(row: ShareGrantRow): ShareGrant {
-  return {
-    id: row.id,
-    ownerId: row.userId,
-    audience: row.audience,
-    recipientId: row.recipientUserId,
-    circleId: row.circleId,
-    habitId: row.habitId,
-    alias: row.alias,
-    fields: row.fields,
-    frequency: row.frequency,
-    consentVersion: row.consentVersion,
-    startsAt: row.startsAt.toISOString(),
-    endsAt: row.endsAt?.toISOString() ?? null,
-    revokedAt: row.revokedAt?.toISOString() ?? null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
-}
 
 function toControl(row: SafetyControlRow): SafetyControl {
   return {
@@ -84,56 +70,27 @@ async function findOwnedGrant(userId: string, grantId: string): Promise<ShareGra
   return row;
 }
 
-async function loadPreviewData(userId: string, habitId: string) {
-  const [habit] = await db
-    .select()
-    .from(habits)
-    .where(and(eq(habits.id, habitId), eq(habits.userId, userId)))
+/** Boundaries and reports may only target someone already connected by consent. */
+async function isConsentedTarget(actorId: string, targetId: string): Promise<boolean> {
+  if (await partnerInviteRepository.hasAcceptedLink(actorId, targetId)) return true;
+
+  const myCircles = await db
+    .select({ circleId: circleMemberships.circleId })
+    .from(circleMemberships)
+    .where(eq(circleMemberships.userId, actorId));
+  if (!myCircles.length) return false;
+
+  const shared = await db
+    .select({ circleId: circleMemberships.circleId })
+    .from(circleMemberships)
+    .where(
+      and(
+        eq(circleMemberships.userId, targetId),
+        inArray(circleMemberships.circleId, myCircles.map((row) => row.circleId))
+      )
+    )
     .limit(1);
-  if (!habit) throw new NotFoundError("Habit not found.");
-
-  const [latestLog] = await db
-    .select()
-    .from(habitLogs)
-    .where(and(eq(habitLogs.userId, userId), eq(habitLogs.habitId, habitId)))
-    .orderBy(desc(habitLogs.updatedAt))
-    .limit(1);
-
-  return { habit, latestLog };
-}
-
-function previewFrom(
-  grant: ShareGrant,
-  { habit, latestLog }: Awaited<ReturnType<typeof loadPreviewData>>
-): SharePreview {
-  return buildSharePreview({
-    grant,
-    habit: {
-      id: habit.id,
-      name: habit.name,
-      description: habit.description,
-      category: habit.category,
-      order: habit.position,
-      isActive: habit.isActive,
-      createdAt: habit.createdAt.toISOString(),
-      color: habit.color,
-      kind: habit.kind,
-      targetValue: habit.targetValue,
-      unit: habit.unit,
-      targetDurationSeconds: habit.targetDurationSeconds,
-    },
-    latestLog: latestLog
-      ? {
-          habitId: latestLog.habitId,
-          date: latestLog.date,
-          status: latestLog.status as 0 | 0.5 | 1,
-          updatedAt: latestLog.updatedAt.toISOString(),
-          value: latestLog.value,
-          unit: latestLog.unit,
-          note: latestLog.note,
-        }
-      : undefined,
-  });
+  return shared.length > 0;
 }
 
 export const socialRepository = {
@@ -143,7 +100,7 @@ export const socialRepository = {
       .from(shareGrants)
       .where(eq(shareGrants.userId, userId))
       .orderBy(desc(shareGrants.createdAt));
-    return rows.map(toGrant);
+    return rows.map(toShareGrant);
   },
 
   async createShareGrant(userId: string, input: ShareGrantInput): Promise<ShareGrant> {
@@ -169,8 +126,11 @@ export const socialRepository = {
         throw new ValidationError("The partner invite must be accepted before sharing.");
       }
     }
-    if (input.audience === "circle" && !input.circleId) {
-      throw new ValidationError("A circle is required.");
+    if (input.audience === "circle") {
+      if (!input.circleId) throw new ValidationError("A circle is required.");
+      if (!(await circleRepository.hasActiveMembership(userId, input.circleId))) {
+        throw new ValidationError("You must be an active circle member before sharing.");
+      }
     }
 
     const duplicateTarget =
@@ -213,12 +173,12 @@ export const socialRepository = {
         updatedAt: now,
       })
       .returning();
-    return toGrant(row!);
+    return toShareGrant(row!);
   },
 
   async getSharePreview(userId: string, grantId: string): Promise<SharePreview> {
     const row = await findOwnedGrant(userId, grantId);
-    return previewFrom(toGrant(row), await loadPreviewData(userId, row.habitId));
+    return previewFromGrant(toShareGrant(row), await loadSharePreviewData(userId, row.habitId));
   },
 
   /** Dry run: shows the exact fields before any grant is persisted. */
@@ -230,6 +190,11 @@ export const socialRepository = {
       if (!input.recipientId) throw new ValidationError("Choose a partner first.");
       if (!(await partnerInviteRepository.hasAcceptedLink(userId, input.recipientId))) {
         throw new ValidationError("The invite must be accepted before sharing.");
+      }
+    }
+    if (input.audience === "circle") {
+      if (!input.circleId || !(await circleRepository.hasActiveMembership(userId, input.circleId))) {
+        throw new ValidationError("You must be an active circle member before sharing.");
       }
     }
     const now = new Date().toISOString();
@@ -250,13 +215,13 @@ export const socialRepository = {
       createdAt: now,
       updatedAt: now,
     };
-    return previewFrom(draft, await loadPreviewData(userId, input.habitId));
+    return previewFromGrant(draft, await loadSharePreviewData(userId, input.habitId));
   },
 
   async revokeShareGrant(userId: string, grantId: string): Promise<ShareGrant> {
     const row = await findOwnedGrant(userId, grantId);
-    if (row.revokedAt) return toGrant(row);
-    const revoked = revokeGrant(toGrant(row));
+    if (row.revokedAt) return toShareGrant(row);
+    const revoked = revokeGrant(toShareGrant(row));
     const [updated] = await db
       .update(shareGrants)
       .set({
@@ -265,7 +230,7 @@ export const socialRepository = {
       })
       .where(eq(shareGrants.id, row.id))
       .returning();
-    return toGrant(updated!);
+    return toShareGrant(updated!);
   },
 
   async listSafetyControls(userId: string): Promise<SafetyControl[]> {
@@ -291,6 +256,9 @@ export const socialRepository = {
         .where(eq(users.id, input.targetUserId))
         .limit(1);
       if (!target) throw new NotFoundError("User not found.");
+      if (!(await isConsentedTarget(userId, input.targetUserId!))) {
+        throw new ValidationError("You can only set boundaries with a connected partner or circle member.");
+      }
     }
 
     const targetMatch =
@@ -356,6 +324,9 @@ export const socialRepository = {
         .where(eq(users.id, input.targetUserId))
         .limit(1);
       if (!target) throw new NotFoundError("User not found.");
+      if (!(await isConsentedTarget(userId, input.targetUserId!))) {
+        throw new ValidationError("You can only report a connected partner or circle member.");
+      }
     }
 
     const now = new Date();

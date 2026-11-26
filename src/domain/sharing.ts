@@ -3,7 +3,6 @@ import type {
   HabitLog,
   HabitStatus,
   PartnerInvite,
-  SafetyControl,
   ShareAudience,
   ShareField,
   ShareGrant,
@@ -72,7 +71,7 @@ export function canAcceptPartnerInvite(
 }
 
 export function isSafetyControlActive(
-  control: SafetyControl,
+  control: { expiresAt: string | Date | null },
   now: Date = new Date()
 ): boolean {
   return !control.expiresAt || new Date(control.expiresAt) > now;

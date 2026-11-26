@@ -13,6 +13,8 @@ import { ulid } from "ulidx";
 import {
   CADENCE_KINDS,
   CHECKIN_SOURCES,
+  CIRCLE_INVITE_STATUSES,
+  CIRCLE_ROLES,
   HABIT_CATEGORIES,
   HABIT_KINDS,
   PARTNER_INVITE_STATUSES,
@@ -50,6 +52,73 @@ export const weeklyReviews = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   },
   (table) => [primaryKey({ columns: [table.userId, table.weekStart] })]
+);
+
+/** Private, invite-only groups. A circle never exposes member habits on its own. */
+export const circles = sqliteTable(
+  "circles",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [index("circles_owner_idx").on(table.ownerUserId)]
+);
+
+export const circleMemberships = sqliteTable(
+  "circle_memberships",
+  {
+    circleId: text("circle_id")
+      .notNull()
+      .references(() => circles.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role", { enum: CIRCLE_ROLES }).notNull().default("member"),
+    joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    primaryKey({ columns: [table.circleId, table.userId] }),
+    index("circle_memberships_user_idx").on(table.userId),
+  ]
+);
+
+/** Exact-email invitations with a secret token shared out of band. No user search. */
+export const circleInvites = sqliteTable(
+  "circle_invites",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    circleId: text("circle_id")
+      .notNull()
+      .references(() => circles.id, { onDelete: "cascade" }),
+    inviterUserId: text("inviter_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    inviteeEmail: text("invitee_email").notNull(),
+    inviteeUserId: text("invitee_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    token: text("token").notNull(),
+    status: text("status", { enum: CIRCLE_INVITE_STATUSES }).notNull().default("pending"),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    acceptedAt: integer("accepted_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("circle_invites_token_uidx").on(table.token),
+    index("circle_invites_circle_idx").on(table.circleId),
+    index("circle_invites_invitee_email_idx").on(table.inviteeEmail),
+    check(
+      "circle_invites_status_target_check",
+      sql`(${table.status} <> 'accepted' OR ${table.inviteeUserId} IS NOT NULL)`
+    ),
+  ]
 );
 
 export const habits = sqliteTable(
@@ -236,7 +305,7 @@ export const shareGrants = sqliteTable(
     audience: text("audience", { enum: SHARE_AUDIENCES }).notNull(),
     habitId: text("habit_id").notNull().references(() => habits.id, { onDelete: "cascade" }),
     recipientUserId: text("recipient_user_id").references(() => users.id, { onDelete: "cascade" }),
-    circleId: text("circle_id"),
+    circleId: text("circle_id").references(() => circles.id, { onDelete: "cascade" }),
     alias: text("alias"),
     fields: text("fields", { mode: "json" }).$type<ShareField[]>().notNull(),
     frequency: text("frequency", { enum: SHARE_FREQUENCIES }).notNull(),
@@ -265,7 +334,7 @@ export const safetyControls = sqliteTable(
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: SAFETY_CONTROL_KINDS }).notNull(),
     targetUserId: text("target_user_id").references(() => users.id, { onDelete: "cascade" }),
-    circleId: text("circle_id"),
+    circleId: text("circle_id").references(() => circles.id, { onDelete: "cascade" }),
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   },

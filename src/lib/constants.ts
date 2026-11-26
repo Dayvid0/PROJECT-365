@@ -47,6 +47,17 @@ export const PARTNER_INVITE_STATUSES = [
   "expired",
 ] as const;
 
+/** Circles are invite-only. Owner/admin manage membership; members only share by grant. */
+export const CIRCLE_ROLES = ["owner", "admin", "member"] as const;
+export const CIRCLE_ASSIGNABLE_ROLES = ["admin", "member"] as const;
+export const CIRCLE_INVITE_STATUSES = [
+  "pending",
+  "accepted",
+  "declined",
+  "cancelled",
+  "expired",
+] as const;
+
 export const SAFETY_CONTROL_KINDS = ["block", "mute", "leave"] as const;
 export const REPORT_TARGET_TYPES = ["user", "content", "circle"] as const;
 export const REPORT_CATEGORIES = [

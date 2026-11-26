@@ -284,6 +284,66 @@ export interface PartnerSummary {
   connectedAt: string;
 }
 
+// --- Invite-only circles ----------------------------------------------------
+// A circle is a private container for people you invited by exact email.
+// Joining a circle never grants access to anyone's habits; only a reviewed
+// ShareGrant scoped to that circle does.
+
+export type CircleRole = "owner" | "admin" | "member";
+export type CircleInviteStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "cancelled"
+  | "expired";
+
+export interface Circle {
+  id: string;
+  ownerId: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CircleSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  role: CircleRole;
+  memberCount: number;
+  createdAt: string;
+}
+
+export interface CircleMember {
+  circleId: string;
+  userId: string;
+  role: CircleRole;
+  joinedAt: string;
+  name: string;
+}
+
+export interface CircleInvite {
+  id: string;
+  circleId: string;
+  circleName: string;
+  inviterId: string;
+  inviterName: string;
+  inviteeEmail: string;
+  inviteeId: string | null;
+  token: string;
+  status: CircleInviteStatus;
+  expiresAt: string;
+  acceptedAt: string | null;
+  createdAt: string;
+}
+
+export interface CircleSharedUpdate {
+  ownerId: string;
+  ownerName: string;
+  preview: SharePreview;
+}
+
 export interface SharePreviewField {
   field: ShareField;
   label: string;

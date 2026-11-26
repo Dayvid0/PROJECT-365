@@ -38,8 +38,9 @@ export default function PrivacyPage() {
           </p>
           <p>
             If you use accountability, we also store invites, the connections you accept, the exact
-            fields you choose to share, and any block, mute, or report records you create. None of
-            this is created without an action you take.
+            fields you choose to share, and any block, mute, or report records you create. Circles
+            add their names, purposes, memberships, and exact-email invitations. None of this is
+            created without an action you take.
           </p>
         </CardContent>
       </Card>
@@ -91,12 +92,14 @@ export default function PrivacyPage() {
           <p>
             Nothing is shared unless you invite someone by their exact email address and they
             accept the invite as that signed-in account. Before you confirm any shared field, you
-            see a preview of exactly what the other person would get. You can revoke a grant at any
-            time, and you can block, mute, report, or leave a connection.
+            see a preview of exactly what the other person or circle would get. You can revoke a
+            grant at any time, and you can block, mute, report, or leave a connection. Joining a
+            circle shares nothing by itself; only your active, circle-scoped grants are visible to
+            current members.
           </p>
           <p>
             There are no public profiles, no user search or discovery, no direct messages, no
-            leaderboards, and no public challenges.
+            leaderboards, no reactions or comments, and no public challenges.
           </p>
         </CardContent>
       </Card>
@@ -108,8 +111,9 @@ export default function PrivacyPage() {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           <p>
-            Check-in notes and weekly reflections are private. They are never included in a shared
-            field grant or any other shared projection. They are included in your own JSON backup.
+            Weekly reflections are private and never included in any share grant. Check-in notes
+            are included only if you explicitly select the note field in a previewed grant; they
+            are otherwise private. Both are included in your own JSON backup.
           </p>
         </CardContent>
       </Card>
@@ -156,8 +160,9 @@ export default function PrivacyPage() {
           <p>
             Settings has a permanent Delete account action. After you type your account email to
             confirm, it removes your profile, sessions, preferences, habits, schedules, check-ins,
-            notes, reminders, weekly reflections, sharing grants, invites, and safety records in one
-            transaction. Your sign-in cookies are cleared as part of that request.
+            notes, reminders, weekly reflections, sharing grants, circles you own, memberships,
+            invites, and safety records in one transaction. Your sign-in cookies are cleared as part
+            of that request.
           </p>
           <p>
             Export a JSON backup first if you want a copy. Deletion is immediate and cannot be

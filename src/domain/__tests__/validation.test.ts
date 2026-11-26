@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  circleCreateSchema,
+  circleInviteSchema,
+  circlePatchSchema,
+  circleRoleSchema,
   createHabitSchema,
   createScheduleVersionSchema,
   dateSchema,
@@ -103,5 +107,19 @@ describe("HTTP input validation", () => {
     const parsed = deleteAccountSchema.safeParse({ confirmation: "  me@example.com " });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.confirmation).toBe("me@example.com");
+  });
+
+  it("validates circle creation and patch input", () => {
+    expect(circleCreateSchema.safeParse({ name: "Walk crew" }).success).toBe(true);
+    expect(circleCreateSchema.safeParse({ name: "  " }).success).toBe(false);
+    expect(circlePatchSchema.safeParse({}).success).toBe(false);
+    expect(circlePatchSchema.safeParse({ description: "Kind check-ins" }).success).toBe(true);
+  });
+
+  it("requires an exact email and prevents assigning the owner role", () => {
+    expect(circleInviteSchema.safeParse({ email: "friend@example.com" }).success).toBe(true);
+    expect(circleInviteSchema.safeParse({ email: "not-an-email" }).success).toBe(false);
+    expect(circleRoleSchema.safeParse({ role: "admin" }).success).toBe(true);
+    expect(circleRoleSchema.safeParse({ role: "owner" }).success).toBe(false);
   });
 });
