@@ -279,6 +279,10 @@ export const safetyReportSchema = z.object({
   detail: z.string().trim().min(1).max(2000),
 });
 
+export const deleteAccountSchema = z.object({
+  confirmation: z.string().trim().min(1, "Type your email to confirm.").max(320),
+});
+
 export type CreateHabitInput = z.infer<typeof createHabitSchema>;
 export type UpdateHabitInput = z.infer<typeof updateHabitSchema>;
 export type UpsertLogsInput = z.infer<typeof upsertLogsSchema>;

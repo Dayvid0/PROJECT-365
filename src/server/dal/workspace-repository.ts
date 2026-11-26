@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNull, lte, max, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lte, max, or, sql } from "drizzle-orm";
 import { ulid } from "ulidx";
 import { resolveStatus, buildMonthlySnapshot, toMonthString } from "@/domain/calculations";
 import {
@@ -34,14 +34,21 @@ import type {
 } from "@/domain/validation";
 import { db, type DbExecutor } from "@/server/db";
 import {
+  accounts,
   habitLogs,
   habitReminders,
   habitScheduleExceptions,
   habitScheduleVersions,
   habits,
   monthlySnapshots,
+  partnerInvites,
+  safetyControls,
+  safetyReports,
+  sessions,
+  shareGrants,
   userPreferences,
   users,
+  verifications,
   weeklyReviews,
   type HabitLogRow,
   type HabitReminderRow,
@@ -990,6 +997,47 @@ export const workspaceRepository = {
           updatedAt: now,
         })
         .where(eq(userPreferences.userId, userId));
+    });
+  },
+
+  /**
+   * Permanently removes one account and every row tied to it. Explicit deletes
+   * keep the order deterministic even where foreign keys would also cascade.
+   */
+  async deleteAccount(userId: string, email: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.delete(habitLogs).where(eq(habitLogs.userId, userId));
+      await tx.delete(habitReminders).where(eq(habitReminders.userId, userId));
+      await tx.delete(habitScheduleExceptions).where(eq(habitScheduleExceptions.userId, userId));
+      await tx.delete(habitScheduleVersions).where(eq(habitScheduleVersions.userId, userId));
+      await tx.delete(monthlySnapshots).where(eq(monthlySnapshots.userId, userId));
+      await tx.delete(weeklyReviews).where(eq(weeklyReviews.userId, userId));
+      await tx.delete(userPreferences).where(eq(userPreferences.userId, userId));
+
+      await tx.delete(shareGrants).where(
+        or(eq(shareGrants.userId, userId), eq(shareGrants.recipientUserId, userId))
+      );
+      await tx.delete(partnerInvites).where(
+        or(
+          eq(partnerInvites.inviterUserId, userId),
+          eq(partnerInvites.inviteeUserId, userId),
+          eq(partnerInvites.inviteeEmail, email)
+        )
+      );
+      await tx.delete(safetyControls).where(
+        or(eq(safetyControls.userId, userId), eq(safetyControls.targetUserId, userId))
+      );
+      await tx.delete(safetyReports).where(
+        or(eq(safetyReports.reporterUserId, userId), eq(safetyReports.targetUserId, userId))
+      );
+
+      await tx.delete(habits).where(eq(habits.userId, userId));
+      await tx.delete(sessions).where(eq(sessions.userId, userId));
+      await tx.delete(accounts).where(eq(accounts.userId, userId));
+      await tx.delete(verifications).where(
+        or(eq(verifications.identifier, email), eq(verifications.identifier, email.toLowerCase()))
+      );
+      await tx.delete(users).where(eq(users.id, userId));
     });
   },
 

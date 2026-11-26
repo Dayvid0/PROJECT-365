@@ -154,8 +154,14 @@ export default function PrivacyPage() {
             Restoring a JSON backup replaces the current workspace in one transaction.
           </p>
           <p>
-            There is no self-serve account deletion flow in this web app yet. There is also no
-            separate retention schedule to describe beyond the data listed above.
+            Settings has a permanent Delete account action. After you type your account email to
+            confirm, it removes your profile, sessions, preferences, habits, schedules, check-ins,
+            notes, reminders, weekly reflections, sharing grants, invites, and safety records in one
+            transaction. Your sign-in cookies are cleared as part of that request.
+          </p>
+          <p>
+            Export a JSON backup first if you want a copy. Deletion is immediate and cannot be
+            undone. No separate retention schedule applies beyond the data listed above.
           </p>
           <Button variant="outline" asChild>
             <Link href="/app/settings">Back to Settings</Link>

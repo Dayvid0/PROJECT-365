@@ -3,6 +3,7 @@ import {
   createHabitSchema,
   createScheduleVersionSchema,
   dateSchema,
+  deleteAccountSchema,
   monthSchema,
   preferencesPatchSchema,
   scheduleExceptionSchema,
@@ -95,5 +96,12 @@ describe("HTTP input validation", () => {
         kind: "planned_break",
       }).success
     ).toBe(false);
+  });
+
+  it("requires an explicit account deletion confirmation", () => {
+    expect(deleteAccountSchema.safeParse({ confirmation: "  " }).success).toBe(false);
+    const parsed = deleteAccountSchema.safeParse({ confirmation: "  me@example.com " });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.confirmation).toBe("me@example.com");
   });
 });

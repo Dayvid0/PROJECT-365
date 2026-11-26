@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Download, LogOut, Upload } from "lucide-react";
+import { Download, LogOut, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
@@ -42,6 +42,7 @@ import {
   useUpdatePreferences,
   useUpdateProfile,
 } from "@/lib/hooks/use-workspace";
+import { useDeleteAccount } from "@/lib/hooks/use-delete-account";
 import { useSignOut } from "@/lib/hooks/use-sign-out";
 import { useWorkspaceUIStore } from "@/stores/workspace-ui-store";
 
@@ -59,6 +60,7 @@ export default function SettingsPage() {
   const updatePreferences = useUpdatePreferences(userId);
   const restoreBackup = useRestoreBackup(userId);
   const signOut = useSignOut();
+  const deleteAccount = useDeleteAccount();
   const pendingCount = useWorkspaceUIStore((state) => state.pendingLogs.length);
   const [draft, setDraft] = useState<{ name: string; timezone: string } | null>(null);
   const [streakDraft, setStreakDraft] = useState<StreakPolicy | null>(null);
@@ -68,6 +70,8 @@ export default function SettingsPage() {
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
   // Derived from the query result; no effect needed to sync server state into the form.
   const name = draft?.name ?? user?.name ?? "";
@@ -76,6 +80,8 @@ export default function SettingsPage() {
   const remindersEnabled = reminderDraft?.enabled ?? user?.remindersEnabled ?? false;
   const quietHoursStart = reminderDraft?.quietHoursStart ?? user?.quietHoursStart ?? "22:00";
   const quietHoursEnd = reminderDraft?.quietHoursEnd ?? user?.quietHoursEnd ?? "07:00";
+  const deleteMatches =
+    deleteConfirmation.trim().toLowerCase() === (user?.email ?? "").toLowerCase();
   const preferencesPending = updatePreferences.isPending;
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
@@ -123,6 +129,15 @@ export default function SettingsPage() {
     useWorkspaceUIStore.getState().clearPending();
     setConfirmDiscard(false);
     toast.success("Pending changes discarded");
+  };
+
+  const removeAccount = async () => {
+    if (!deleteMatches) return;
+    try {
+      await deleteAccount.mutateAsync(deleteConfirmation.trim());
+    } catch {
+      // Toast handled by the mutation hook.
+    }
   };
 
   return (
@@ -406,6 +421,57 @@ export default function SettingsPage() {
             </div>
           ) : (
             <Button variant="outline" onClick={() => setConfirmSignOut(true)}>Sign out</Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/40 bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="size-4" /> Delete account
+          </CardTitle>
+          <CardDescription>
+            Permanently removes your profile, sessions, preferences, habits, schedules, check-ins,
+            notes, reminders, weekly reflections, and sharing records. Export a JSON backup first if
+            you want a copy. This cannot be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {confirmDelete ? (
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirmation">
+                Type {user?.email ?? "your account email"} to confirm
+              </Label>
+              <Input
+                id="delete-confirmation"
+                value={deleteConfirmation}
+                maxLength={320}
+                autoComplete="off"
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="destructive"
+                  disabled={!deleteMatches || deleteAccount.isPending}
+                  onClick={() => void removeAccount()}
+                >
+                  Permanently delete account
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setConfirmDelete(false);
+                    setDeleteConfirmation("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="outline" onClick={() => setConfirmDelete(true)}>
+              Delete account
+            </Button>
           )}
         </CardContent>
       </Card>

@@ -40,7 +40,7 @@ Local env files and SQLite databases are gitignored. Never commit `.env.local`.
 - `/app` dashboard, `/app/grid`, `/app/habits`, `/app/habits/[habitId]`,
   `/app/analytics`, `/app/settings`
 - `/api/auth/*` Better Auth, `/api/workspace/*` authenticated workspace REST,
-  `/api/health`, `/api/workspace/export` CSV download
+  `/api/health`, `/api/workspace/export` CSV download, `/api/account` permanent deletion
 - `/offline` PWA fallback page
 
 ## Architecture
