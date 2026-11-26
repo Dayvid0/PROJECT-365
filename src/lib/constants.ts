@@ -39,6 +39,14 @@ export const SHARE_FREQUENCIES = [
   "none",
 ] as const;
 
+export const PARTNER_INVITE_STATUSES = [
+  "pending",
+  "accepted",
+  "declined",
+  "cancelled",
+  "expired",
+] as const;
+
 export const SAFETY_CONTROL_KINDS = ["block", "mute", "leave"] as const;
 export const REPORT_TARGET_TYPES = ["user", "content", "circle"] as const;
 export const REPORT_CATEGORIES = [

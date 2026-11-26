@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSharePreview,
+  canAcceptPartnerInvite,
   isGrantActive,
   isSafetyControlActive,
   revokeGrant,
   shareableFields,
 } from "../sharing";
-import type { Habit, SafetyControl, ShareGrant } from "../types";
+import type { Habit, PartnerInvite, SafetyControl, ShareGrant } from "../types";
 
 const now = new Date("2026-03-03T12:00:00.000Z");
 
@@ -110,5 +111,49 @@ describe("consent-based sharing", () => {
     };
     expect(isSafetyControlActive(control, now)).toBe(false);
     expect(isSafetyControlActive({ ...control, expiresAt: null }, now)).toBe(true);
+  });
+});
+
+describe("partner invites", () => {
+  const invite: PartnerInvite = {
+    id: "invite-1",
+    inviterId: "owner-1",
+    inviterName: "Owner",
+    inviteeEmail: "Partner@Example.com",
+    inviteeId: null,
+    token: "secret-token",
+    status: "pending",
+    expiresAt: "2026-04-01T00:00:00.000Z",
+    acceptedAt: null,
+    createdAt: "2026-03-01T00:00:00.000Z",
+  };
+
+  it("accepts only the invited email while the invite is pending", () => {
+    expect(
+      canAcceptPartnerInvite(invite, { id: "viewer-1", email: "partner@example.com" }, now)
+    ).toBe(true);
+    expect(
+      canAcceptPartnerInvite(invite, { id: "viewer-1", email: "someone@example.com" }, now)
+    ).toBe(false);
+    expect(
+      canAcceptPartnerInvite({ ...invite, status: "declined" }, { id: "viewer-1", email: "partner@example.com" }, now)
+    ).toBe(false);
+  });
+
+  it("refuses expired invites and invites bound to another account", () => {
+    expect(
+      canAcceptPartnerInvite(
+        { ...invite, expiresAt: "2026-03-01T00:00:00.000Z" },
+        { id: "viewer-1", email: "partner@example.com" },
+        now
+      )
+    ).toBe(false);
+    expect(
+      canAcceptPartnerInvite(
+        { ...invite, inviteeId: "other-account" },
+        { id: "viewer-1", email: "partner@example.com" },
+        now
+      )
+    ).toBe(false);
   });
 });

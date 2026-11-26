@@ -221,6 +221,34 @@ export interface ShareGrant {
   updatedAt: string;
 }
 
+export type PartnerInviteStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "cancelled"
+  | "expired";
+
+export interface PartnerInvite {
+  id: string;
+  inviterId: string;
+  inviterName: string;
+  inviteeEmail: string;
+  inviteeId: string | null;
+  token: string;
+  status: PartnerInviteStatus;
+  expiresAt: string;
+  acceptedAt: string | null;
+  createdAt: string;
+}
+
+export interface PartnerSummary {
+  userId: string;
+  name: string;
+  email: string;
+  direction: "invited" | "invited_by";
+  connectedAt: string;
+}
+
 export interface SharePreviewField {
   field: ShareField;
   label: string;

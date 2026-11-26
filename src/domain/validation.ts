@@ -205,6 +205,10 @@ export const onboardingModeSchema = z.object({
   mode: z.enum(["defaults", "scratch"]),
 });
 
+export const partnerInviteSchema = z.object({
+  email: z.email("Enter a valid email address.").max(320),
+});
+
 const shareFieldsSchema = z
   .array(z.enum(SHARE_FIELDS))
   .min(1, "Choose at least one field to share.")
@@ -274,5 +278,6 @@ export type PreferencesPatchSchemaType = z.infer<typeof preferencesPatchSchema>;
 export type DeleteLogInput = z.infer<typeof deleteLogSchema>;
 export type HabitReminderInput = z.infer<typeof habitReminderSchema>;
 export type ShareGrantInput = z.infer<typeof shareGrantSchema>;
+export type PartnerInviteInput = z.infer<typeof partnerInviteSchema>;
 export type SafetyControlInput = z.infer<typeof safetyControlSchema>;
 export type SafetyReportInput = z.infer<typeof safetyReportSchema>;

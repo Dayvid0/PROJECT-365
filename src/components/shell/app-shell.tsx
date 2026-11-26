@@ -7,6 +7,7 @@ import {
   CalendarCheck2,
   CloudOff,
   Grid3X3,
+  HeartHandshake,
   ListChecks,
   LogOut,
   Settings,
@@ -25,6 +26,7 @@ const NAV = [
   { href: "/app/grid", label: "Grid", icon: Grid3X3 },
   { href: "/app/habits", label: "Habits", icon: ListChecks },
   { href: "/app/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/app/accountability", label: "Accountability", icon: HeartHandshake },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ] as const;
 

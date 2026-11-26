@@ -2,6 +2,7 @@ import type {
   Habit,
   HabitLog,
   HabitStatus,
+  PartnerInvite,
   SafetyControl,
   ShareAudience,
   ShareField,
@@ -50,6 +51,24 @@ export function shareableFields(grant: ShareGrant, now: Date = new Date()): Shar
 export function revokeGrant(grant: ShareGrant, now: Date = new Date()): ShareGrant {
   const timestamp = now.toISOString();
   return { ...grant, revokedAt: timestamp, updatedAt: timestamp };
+}
+
+/**
+ * Invites are bound to an exact email address and a single signed-in account.
+ * This keeps partner connections out of public discovery and prevents a
+ * forwarded link from connecting the wrong account.
+ */
+export function canAcceptPartnerInvite(
+  invite: PartnerInvite,
+  viewer: { id: string; email: string },
+  now: Date = new Date()
+): boolean {
+  if (invite.status !== "pending") return false;
+  if (invite.inviteeEmail.trim().toLowerCase() !== viewer.email.trim().toLowerCase()) {
+    return false;
+  }
+  if (invite.inviteeId && invite.inviteeId !== viewer.id) return false;
+  return new Date(invite.expiresAt) > now;
 }
 
 export function isSafetyControlActive(

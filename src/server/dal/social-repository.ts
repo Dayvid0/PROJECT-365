@@ -21,6 +21,7 @@ import {
   users,
 } from "@/server/db/schema";
 import { NotFoundError, ValidationError } from "./errors";
+import { partnerInviteRepository } from "./partner-invite-repository";
 
 type ShareGrantRow = typeof shareGrants.$inferSelect;
 type SafetyControlRow = typeof safetyControls.$inferSelect;
@@ -83,6 +84,58 @@ async function findOwnedGrant(userId: string, grantId: string): Promise<ShareGra
   return row;
 }
 
+async function loadPreviewData(userId: string, habitId: string) {
+  const [habit] = await db
+    .select()
+    .from(habits)
+    .where(and(eq(habits.id, habitId), eq(habits.userId, userId)))
+    .limit(1);
+  if (!habit) throw new NotFoundError("Habit not found.");
+
+  const [latestLog] = await db
+    .select()
+    .from(habitLogs)
+    .where(and(eq(habitLogs.userId, userId), eq(habitLogs.habitId, habitId)))
+    .orderBy(desc(habitLogs.updatedAt))
+    .limit(1);
+
+  return { habit, latestLog };
+}
+
+function previewFrom(
+  grant: ShareGrant,
+  { habit, latestLog }: Awaited<ReturnType<typeof loadPreviewData>>
+): SharePreview {
+  return buildSharePreview({
+    grant,
+    habit: {
+      id: habit.id,
+      name: habit.name,
+      description: habit.description,
+      category: habit.category,
+      order: habit.position,
+      isActive: habit.isActive,
+      createdAt: habit.createdAt.toISOString(),
+      color: habit.color,
+      kind: habit.kind,
+      targetValue: habit.targetValue,
+      unit: habit.unit,
+      targetDurationSeconds: habit.targetDurationSeconds,
+    },
+    latestLog: latestLog
+      ? {
+          habitId: latestLog.habitId,
+          date: latestLog.date,
+          status: latestLog.status as 0 | 0.5 | 1,
+          updatedAt: latestLog.updatedAt.toISOString(),
+          value: latestLog.value,
+          unit: latestLog.unit,
+          note: latestLog.note,
+        }
+      : undefined,
+  });
+}
+
 export const socialRepository = {
   async listShareGrants(userId: string): Promise<ShareGrant[]> {
     const rows = await db
@@ -112,6 +165,9 @@ export const socialRepository = {
         .where(eq(users.id, input.recipientId))
         .limit(1);
       if (!recipient) throw new NotFoundError("Partner not found.");
+      if (!(await partnerInviteRepository.hasAcceptedLink(userId, input.recipientId))) {
+        throw new ValidationError("The partner invite must be accepted before sharing.");
+      }
     }
     if (input.audience === "circle" && !input.circleId) {
       throw new ValidationError("A circle is required.");
@@ -162,48 +218,39 @@ export const socialRepository = {
 
   async getSharePreview(userId: string, grantId: string): Promise<SharePreview> {
     const row = await findOwnedGrant(userId, grantId);
-    const [habit] = await db
-      .select()
-      .from(habits)
-      .where(and(eq(habits.id, row.habitId), eq(habits.userId, userId)))
-      .limit(1);
-    if (!habit) throw new NotFoundError("Habit not found.");
+    return previewFrom(toGrant(row), await loadPreviewData(userId, row.habitId));
+  },
 
-    const [latestLog] = await db
-      .select()
-      .from(habitLogs)
-      .where(and(eq(habitLogs.userId, userId), eq(habitLogs.habitId, row.habitId)))
-      .orderBy(desc(habitLogs.updatedAt))
-      .limit(1);
-
-    return buildSharePreview({
-      grant: toGrant(row),
-      habit: {
-        id: habit.id,
-        name: habit.name,
-        description: habit.description,
-        category: habit.category,
-        order: habit.position,
-        isActive: habit.isActive,
-        createdAt: habit.createdAt.toISOString(),
-        color: habit.color,
-        kind: habit.kind,
-        targetValue: habit.targetValue,
-        unit: habit.unit,
-        targetDurationSeconds: habit.targetDurationSeconds,
-      },
-      latestLog: latestLog
-        ? {
-            habitId: latestLog.habitId,
-            date: latestLog.date,
-            status: latestLog.status as 0 | 0.5 | 1,
-            updatedAt: latestLog.updatedAt.toISOString(),
-            value: latestLog.value,
-            unit: latestLog.unit,
-            note: latestLog.note,
-          }
-        : undefined,
-    });
+  /** Dry run: shows the exact fields before any grant is persisted. */
+  async previewShareGrant(
+    userId: string,
+    input: ShareGrantInput
+  ): Promise<SharePreview> {
+    if (input.audience === "partner") {
+      if (!input.recipientId) throw new ValidationError("Choose a partner first.");
+      if (!(await partnerInviteRepository.hasAcceptedLink(userId, input.recipientId))) {
+        throw new ValidationError("The invite must be accepted before sharing.");
+      }
+    }
+    const now = new Date().toISOString();
+    const draft: ShareGrant = {
+      id: "preview",
+      ownerId: userId,
+      audience: input.audience,
+      recipientId: input.audience === "partner" ? input.recipientId! : null,
+      circleId: input.audience === "circle" ? input.circleId! : null,
+      habitId: input.habitId,
+      alias: input.alias ?? null,
+      fields: input.fields,
+      frequency: input.frequency,
+      consentVersion: input.consentVersion,
+      startsAt: input.startsAt ?? now,
+      endsAt: input.endsAt ?? null,
+      revokedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    return previewFrom(draft, await loadPreviewData(userId, input.habitId));
   },
 
   async revokeShareGrant(userId: string, grantId: string): Promise<ShareGrant> {

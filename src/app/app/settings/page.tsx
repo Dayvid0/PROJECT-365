@@ -326,6 +326,21 @@ export default function SettingsPage() {
 
       <Card className="border-border bg-card">
         <CardHeader>
+          <CardTitle>Accountability</CardTitle>
+          <CardDescription>
+            Partner invites, field-level sharing, revocation, and safety controls live on their own
+            page. Nothing is shared unless you explicitly confirm it.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" asChild>
+            <a href="/app/accountability">Manage accountability</a>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border bg-card">
+        <CardHeader>
           <CardTitle>About</CardTitle>
         </CardHeader>
         <CardContent className="flex justify-between text-sm text-muted-foreground">

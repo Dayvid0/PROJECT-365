@@ -15,6 +15,7 @@ import {
   CHECKIN_SOURCES,
   HABIT_CATEGORIES,
   HABIT_KINDS,
+  PARTNER_INVITE_STATUSES,
   REPORT_CATEGORIES,
   REPORT_STATUSES,
   REPORT_TARGET_TYPES,
@@ -175,6 +176,39 @@ export const habitReminders = sqliteTable(
   (table) => [
     uniqueIndex("habit_reminders_user_habit_uidx").on(table.userId, table.habitId),
     index("habit_reminders_user_enabled_idx").on(table.userId, table.enabled),
+  ]
+);
+
+/**
+ * Partner invites are explicit and email-bound. There is no user search or
+ * public profile lookup: the invite link is shared out of band by its owner.
+ */
+export const partnerInvites = sqliteTable(
+  "partner_invites",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    inviterUserId: text("inviter_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    inviteeEmail: text("invitee_email").notNull(),
+    inviteeUserId: text("invitee_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    token: text("token").notNull(),
+    status: text("status", { enum: PARTNER_INVITE_STATUSES }).notNull().default("pending"),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    acceptedAt: integer("accepted_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("partner_invites_token_uidx").on(table.token),
+    index("partner_invites_inviter_idx").on(table.inviterUserId),
+    index("partner_invites_invitee_email_idx").on(table.inviteeEmail),
+    check(
+      "partner_invites_status_target_check",
+      sql`(${table.status} <> 'accepted' OR ${table.inviteeUserId} IS NOT NULL)`
+    ),
   ]
 );
 

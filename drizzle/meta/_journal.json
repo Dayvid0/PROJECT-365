@@ -29,6 +29,13 @@
       "when": 1795670521832,
       "tag": "0003_mushy_black_bolt",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795674270201,
+      "tag": "0004_soft_triathlon",
+      "breakpoints": true
     }
   ]
 }
