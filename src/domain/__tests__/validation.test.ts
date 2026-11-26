@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  circleChallengeParticipationSchema,
+  circleChallengeSchema,
+  circleCommentSchema,
   circleCreateSchema,
   circleInviteSchema,
+  circleReactionSchema,
   circlePatchSchema,
   circleRoleSchema,
   createHabitSchema,
@@ -121,5 +125,27 @@ describe("HTTP input validation", () => {
     expect(circleInviteSchema.safeParse({ email: "not-an-email" }).success).toBe(false);
     expect(circleRoleSchema.safeParse({ role: "admin" }).success).toBe(true);
     expect(circleRoleSchema.safeParse({ role: "owner" }).success).toBe(false);
+  });
+
+  it("accepts only supportive reactions and bounded comments", () => {
+    expect(circleReactionSchema.safeParse({ kind: "cheer" }).success).toBe(true);
+    expect(circleReactionSchema.safeParse({ kind: "downvote" }).success).toBe(false);
+    expect(circleCommentSchema.safeParse({ body: "Proud of you" }).success).toBe(true);
+    expect(circleCommentSchema.safeParse({ body: "   " }).success).toBe(false);
+    expect(circleCommentSchema.safeParse({ body: "x".repeat(1001) }).success).toBe(false);
+  });
+
+  it("requires a real challenge window and explicit participation", () => {
+    const challenge = {
+      title: "Ten quiet minutes",
+      startsAt: "2026-03-01T00:00:00.000Z",
+      endsAt: "2026-03-08T00:00:00.000Z",
+    };
+    expect(circleChallengeSchema.safeParse(challenge).success).toBe(true);
+    expect(
+      circleChallengeSchema.safeParse({ ...challenge, endsAt: challenge.startsAt }).success
+    ).toBe(false);
+    expect(circleChallengeParticipationSchema.safeParse({ joined: true }).success).toBe(true);
+    expect(circleChallengeParticipationSchema.safeParse({}).success).toBe(false);
   });
 });

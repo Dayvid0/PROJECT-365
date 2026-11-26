@@ -3,6 +3,7 @@ import {
   CADENCE_KINDS,
   CHECKIN_SOURCES,
   CIRCLE_ASSIGNABLE_ROLES,
+  CIRCLE_REACTION_KINDS,
   HABIT_CATEGORIES,
   HABIT_KINDS,
   REPORT_CATEGORIES,
@@ -300,6 +301,30 @@ export const circleRoleSchema = z.object({
   role: z.enum(CIRCLE_ASSIGNABLE_ROLES),
 });
 
+export const circleReactionSchema = z.object({
+  kind: z.enum(CIRCLE_REACTION_KINDS),
+});
+
+export const circleCommentSchema = z.object({
+  body: z.string().trim().min(1, "Write a supportive comment.").max(1000),
+});
+
+export const circleChallengeSchema = z
+  .object({
+    title: z.string().trim().min(1, "Give the challenge a name.").max(80),
+    description: z.string().trim().max(500).nullable().optional(),
+    startsAt: z.string().datetime({ offset: true }),
+    endsAt: z.string().datetime({ offset: true }),
+  })
+  .refine(
+    (value) => new Date(value.endsAt) > new Date(value.startsAt),
+    "The challenge must end after it starts."
+  );
+
+export const circleChallengeParticipationSchema = z.object({
+  joined: z.boolean(),
+});
+
 export const deleteAccountSchema = z.object({
   confirmation: z.string().trim().min(1, "Type your email to confirm.").max(320),
 });
@@ -319,5 +344,11 @@ export type CircleCreateInput = z.infer<typeof circleCreateSchema>;
 export type CirclePatchInput = z.infer<typeof circlePatchSchema>;
 export type CircleInviteInput = z.infer<typeof circleInviteSchema>;
 export type CircleRoleInput = z.infer<typeof circleRoleSchema>;
+export type CircleReactionInput = z.infer<typeof circleReactionSchema>;
+export type CircleCommentInput = z.infer<typeof circleCommentSchema>;
+export type CircleChallengeInput = z.infer<typeof circleChallengeSchema>;
+export type CircleChallengeParticipationInput = z.infer<
+  typeof circleChallengeParticipationSchema
+>;
 export type SafetyControlInput = z.infer<typeof safetyControlSchema>;
 export type SafetyReportInput = z.infer<typeof safetyReportSchema>;

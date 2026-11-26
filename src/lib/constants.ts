@@ -58,6 +58,9 @@ export const CIRCLE_INVITE_STATUSES = [
   "expired",
 ] as const;
 
+/** Support is explicit and positive; there are no downvotes or comparison metrics. */
+export const CIRCLE_REACTION_KINDS = ["cheer", "support", "respect"] as const;
+
 export const SAFETY_CONTROL_KINDS = ["block", "mute", "leave"] as const;
 export const REPORT_TARGET_TYPES = ["user", "content", "circle"] as const;
 export const REPORT_CATEGORIES = [

@@ -35,8 +35,12 @@ import type {
 import { db, type DbExecutor } from "@/server/db";
 import {
   accounts,
+  circleChallengeParticipants,
+  circleChallenges,
+  circleComments,
   circleInvites,
   circleMemberships,
+  circleReactions,
   circles,
   habitLogs,
   habitReminders,
@@ -1034,9 +1038,18 @@ export const workspaceRepository = {
       await tx.delete(shareGrants).where(
         or(eq(shareGrants.userId, userId), eq(shareGrants.recipientUserId, userId))
       );
+      await tx.delete(circleReactions).where(eq(circleReactions.userId, userId));
+      await tx.delete(circleComments).where(eq(circleComments.authorUserId, userId));
+      await tx.delete(circleChallengeParticipants).where(
+        eq(circleChallengeParticipants.userId, userId)
+      );
+      await tx.delete(circleChallenges).where(eq(circleChallenges.creatorUserId, userId));
       if (ownedCircleIds.length) {
         await tx.delete(circleInvites).where(inArray(circleInvites.circleId, ownedCircleIds));
         await tx.delete(shareGrants).where(inArray(shareGrants.circleId, ownedCircleIds));
+        await tx.delete(circleReactions).where(inArray(circleReactions.circleId, ownedCircleIds));
+        await tx.delete(circleComments).where(inArray(circleComments.circleId, ownedCircleIds));
+        await tx.delete(circleChallenges).where(inArray(circleChallenges.circleId, ownedCircleIds));
       }
       await tx.delete(partnerInvites).where(
         or(

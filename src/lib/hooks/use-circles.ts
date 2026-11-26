@@ -4,8 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type {
   Circle,
+  CircleChallenge,
+  CircleComment,
   CircleInvite,
   CircleMember,
+  CircleReactionKind,
+  CircleReactionSummary,
+  CircleReceivedSupport,
   CircleSharedUpdate,
   CircleSummary,
   ShareField,
@@ -13,9 +18,13 @@ import type {
   SharePreview,
 } from "@/domain/types";
 import type {
+  CircleChallengeInput,
+  CircleChallengeParticipationInput,
+  CircleCommentInput,
   CircleCreateInput,
   CircleInviteInput,
   CirclePatchInput,
+  CircleReactionInput,
   CircleRoleInput,
 } from "@/domain/validation";
 import { apiFetch, errorMessage } from "@/lib/api";
@@ -44,6 +53,10 @@ function keys(userId: string) {
       [...workspaceKeys.userRoot(userId), "circles", circleId, "invites"] as const,
     shared: (circleId: string) =>
       [...workspaceKeys.userRoot(userId), "circles", circleId, "shared"] as const,
+    challenges: (circleId: string) =>
+      [...workspaceKeys.userRoot(userId), "circles", circleId, "challenges"] as const,
+    receivedSupport: (circleId: string) =>
+      [...workspaceKeys.userRoot(userId), "circles", circleId, "support-received"] as const,
   };
 }
 
@@ -238,7 +251,7 @@ export function useRemoveCircleMember(userId: string, circleId: string) {
     onSuccess: () => {
       invalidate();
       toast.success("Member removed", {
-        description: "Their sharing grants to this circle were revoked.",
+        description: "Their grants, reactions, comments, and challenges in this circle were removed.",
       });
     },
     onError: (error) => toast.error("Could not remove member", { description: errorMessage(error) }),
@@ -255,7 +268,7 @@ export function useLeaveCircle(userId: string, circleId: string) {
     onSuccess: () => {
       invalidate();
       toast.success("Left circle", {
-        description: "Your sharing grants to this circle were revoked.",
+        description: "Your grants and support activity in this circle were removed.",
       });
     },
     onError: (error) => toast.error("Could not leave circle", { description: errorMessage(error) }),
@@ -295,5 +308,149 @@ export function usePreviewCircleGrant() {
           consentVersion: 1,
         }),
       }),
+  });
+}
+
+export function useSetCircleReaction(userId: string, circleId: string) {
+  const invalidate = useInvalidateCircles(userId);
+  return useMutation({
+    mutationFn: ({
+      grantId,
+      kind,
+    }: {
+      grantId: string;
+      kind: CircleReactionKind;
+    }) =>
+      apiFetch<{ reaction: CircleReactionSummary }>(
+        `/api/workspace/circles/${encodeURIComponent(circleId)}/shared/${encodeURIComponent(grantId)}/reactions`,
+        {
+          method: "POST",
+          body: JSON.stringify({ kind } satisfies CircleReactionInput),
+        }
+      ),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCreateCircleComment(userId: string, circleId: string) {
+  const invalidate = useInvalidateCircles(userId);
+  return useMutation({
+    mutationFn: ({
+      grantId,
+      body,
+    }: {
+      grantId: string;
+      body: string;
+    }) =>
+      apiFetch<{ comment: CircleComment }>(
+        `/api/workspace/circles/${encodeURIComponent(circleId)}/shared/${encodeURIComponent(grantId)}/comments`,
+        {
+          method: "POST",
+          body: JSON.stringify({ body } satisfies CircleCommentInput),
+        }
+      ),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Comment added");
+    },
+    onError: (error) => toast.error("Could not add comment", { description: errorMessage(error) }),
+  });
+}
+
+export function useDeleteCircleComment(userId: string, circleId: string) {
+  const invalidate = useInvalidateCircles(userId);
+  return useMutation({
+    mutationFn: ({ grantId, commentId }: { grantId: string; commentId: string }) =>
+      apiFetch(
+        `/api/workspace/circles/${encodeURIComponent(circleId)}/shared/${encodeURIComponent(grantId)}/comments?id=${encodeURIComponent(commentId)}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Comment deleted");
+    },
+    onError: (error) => toast.error("Could not delete comment", { description: errorMessage(error) }),
+  });
+}
+
+export function useReceivedCircleSupport(userId: string, circleId: string, enabled = true) {
+  return useQuery({
+    queryKey: keys(userId).receivedSupport(circleId),
+    queryFn: () =>
+      apiFetch<{ support: CircleReceivedSupport[] }>(
+        `/api/workspace/circles/${encodeURIComponent(circleId)}/support-received`
+      ),
+    enabled: enabled && Boolean(circleId),
+  });
+}
+
+export function useCircleChallenges(userId: string, circleId: string, enabled = true) {
+  return useQuery({
+    queryKey: keys(userId).challenges(circleId),
+    queryFn: () =>
+      apiFetch<{ challenges: CircleChallenge[] }>(
+        `/api/workspace/circles/${encodeURIComponent(circleId)}/challenges`
+      ),
+    enabled: enabled && Boolean(circleId),
+  });
+}
+
+export function useCreateCircleChallenge(userId: string, circleId: string) {
+  const invalidate = useInvalidateCircles(userId);
+  return useMutation({
+    mutationFn: (input: CircleChallengeInput) =>
+      apiFetch<{ challenge: CircleChallenge }>(
+        `/api/workspace/circles/${encodeURIComponent(circleId)}/challenges`,
+        {
+          method: "POST",
+          body: JSON.stringify(input),
+        }
+      ),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Challenge created", {
+        description: "Only current circle members can see it. No progress is published.",
+      });
+    },
+    onError: (error) =>
+      toast.error("Could not create challenge", { description: errorMessage(error) }),
+  });
+}
+
+export function useSetCircleChallengeParticipation(userId: string, circleId: string) {
+  const invalidate = useInvalidateCircles(userId);
+  return useMutation({
+    mutationFn: ({
+      challengeId,
+      joined,
+    }: {
+      challengeId: string;
+      joined: boolean;
+    }) =>
+      apiFetch<{ challenge: CircleChallenge }>(
+        `/api/workspace/circles/${encodeURIComponent(circleId)}/challenges/${encodeURIComponent(challengeId)}/participation`,
+        {
+          method: "POST",
+          body: JSON.stringify({ joined } satisfies CircleChallengeParticipationInput),
+        }
+      ),
+    onSuccess: invalidate,
+    onError: (error) => toast.error("Could not update challenge", { description: errorMessage(error) }),
+  });
+}
+
+export function useDeleteCircleChallenge(userId: string, circleId: string) {
+  const invalidate = useInvalidateCircles(userId);
+  return useMutation({
+    mutationFn: (challengeId: string) =>
+      apiFetch(
+        `/api/workspace/circles/${encodeURIComponent(circleId)}/challenges?id=${encodeURIComponent(challengeId)}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Challenge deleted");
+    },
+    onError: (error) => toast.error("Could not delete challenge", { description: errorMessage(error) }),
   });
 }

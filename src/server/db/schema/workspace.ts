@@ -14,6 +14,7 @@ import {
   CADENCE_KINDS,
   CHECKIN_SOURCES,
   CIRCLE_INVITE_STATUSES,
+  CIRCLE_REACTION_KINDS,
   CIRCLE_ROLES,
   HABIT_CATEGORIES,
   HABIT_KINDS,
@@ -323,6 +324,106 @@ export const shareGrants = sqliteTable(
       "share_grants_audience_target_check",
       sql`((${table.audience} = 'partner' AND ${table.recipientUserId} IS NOT NULL AND ${table.circleId} IS NULL) OR (${table.audience} = 'circle' AND ${table.circleId} IS NOT NULL AND ${table.recipientUserId} IS NULL))`
     ),
+  ]
+);
+
+/**
+ * Supportive interactions attach only to a still-active, circle-scoped grant.
+ * Reactions are anonymous counts; comments are authored support, not habit data.
+ */
+export const circleReactions = sqliteTable(
+  "circle_reactions",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    circleId: text("circle_id")
+      .notNull()
+      .references(() => circles.id, { onDelete: "cascade" }),
+    grantId: text("grant_id")
+      .notNull()
+      .references(() => shareGrants.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: CIRCLE_REACTION_KINDS }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("circle_reactions_circle_grant_user_uidx").on(
+      table.circleId,
+      table.grantId,
+      table.userId
+    ),
+    index("circle_reactions_grant_idx").on(table.grantId),
+  ]
+);
+
+export const circleComments = sqliteTable(
+  "circle_comments",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    circleId: text("circle_id")
+      .notNull()
+      .references(() => circles.id, { onDelete: "cascade" }),
+    grantId: text("grant_id")
+      .notNull()
+      .references(() => shareGrants.id, { onDelete: "cascade" }),
+    authorUserId: text("author_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("circle_comments_circle_grant_idx").on(table.circleId, table.grantId),
+    index("circle_comments_author_idx").on(table.authorUserId),
+    check("circle_comments_body_check", sql`length(${table.body}) between 1 and 1000`),
+  ]
+);
+
+/**
+ * Challenges are circle-local intentions with opt-in participation. There are
+ * no public challenges, progress feeds, participant lists, or leaderboards.
+ */
+export const circleChallenges = sqliteTable(
+  "circle_challenges",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    circleId: text("circle_id")
+      .notNull()
+      .references(() => circles.id, { onDelete: "cascade" }),
+    creatorUserId: text("creator_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    startsAt: integer("starts_at", { mode: "timestamp_ms" }).notNull(),
+    endsAt: integer("ends_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("circle_challenges_circle_idx").on(table.circleId),
+    check("circle_challenges_title_check", sql`length(${table.title}) between 1 and 80`),
+    check("circle_challenges_window_check", sql`${table.endsAt} > ${table.startsAt}`),
+  ]
+);
+
+export const circleChallengeParticipants = sqliteTable(
+  "circle_challenge_participants",
+  {
+    challengeId: text("challenge_id")
+      .notNull()
+      .references(() => circleChallenges.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    primaryKey({ columns: [table.challengeId, table.userId] }),
+    index("circle_challenge_participants_user_idx").on(table.userId),
   ]
 );
 

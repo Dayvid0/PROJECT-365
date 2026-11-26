@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   canAcceptCircleInvite,
   canDeleteCircle,
+  canDeleteCircleContent,
+  canJoinCircleChallenge,
   canManageCircle,
   canRemoveCircleMember,
   canSetCircleMemberRole,
+  hasActiveSafetyBoundary,
 } from "../circles";
 import type { CircleInvite } from "../types";
 
@@ -82,5 +85,49 @@ describe("circle invites", () => {
         now
       )
     ).toBe(false);
+  });
+});
+
+describe("circle support permissions", () => {
+  it("lets authors and managers delete content but never other members", () => {
+    expect(canDeleteCircleContent("member", true)).toBe(true);
+    expect(canDeleteCircleContent("admin", false)).toBe(true);
+    expect(canDeleteCircleContent("owner", false)).toBe(true);
+    expect(canDeleteCircleContent("member", false)).toBe(false);
+    expect(canDeleteCircleContent(null, false)).toBe(false);
+  });
+
+  it("closes challenge joining when the window ends", () => {
+    expect(canJoinCircleChallenge({ endsAt: "2026-03-04T00:00:00.000Z" }, now)).toBe(true);
+    expect(canJoinCircleChallenge({ endsAt: "2026-03-03T00:00:00.000Z" }, now)).toBe(false);
+  });
+
+  it("honours live block and mute boundaries in either direction", () => {
+    const controls = [
+      {
+        userId: "viewer-1",
+        targetUserId: "member-1",
+        kind: "mute" as const,
+        expiresAt: null,
+      },
+    ];
+    expect(hasActiveSafetyBoundary("viewer-1", "member-1", controls, now)).toBe(true);
+    expect(hasActiveSafetyBoundary("viewer-1", "member-2", controls, now)).toBe(false);
+    expect(
+      hasActiveSafetyBoundary(
+        "viewer-1",
+        "member-1",
+        [{ ...controls[0]!, expiresAt: "2026-03-02T00:00:00.000Z" }],
+        now
+      )
+    ).toBe(false);
+    expect(
+      hasActiveSafetyBoundary(
+        "viewer-1",
+        "member-1",
+        [{ ...controls[0]!, userId: "member-1", targetUserId: "viewer-1" }],
+        now
+      )
+    ).toBe(true);
   });
 });

@@ -31,6 +31,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CircleChallengesPanel } from "@/components/circles/circle-challenges-panel";
+import { CircleReceivedSupportPanel } from "@/components/circles/circle-received-support-panel";
+import { CircleSupportPanel } from "@/components/circles/circle-support-panel";
 import { errorMessage } from "@/lib/api";
 import {
   canDeleteCircle,
@@ -67,6 +70,7 @@ import {
   useDeleteCircle,
   useLeaveCircle,
   usePreviewCircleGrant,
+  useReceivedCircleSupport,
   useRemoveCircleMember,
   useSetCircleMemberRole,
   useUpdateCircle,
@@ -98,6 +102,7 @@ export default function CircleDetailPage() {
   const canManage = canManageCircle(detail.data?.role ?? null);
   const invites = useCircleInvites(userId, circleId, canManage);
   const shared = useCircleSharedUpdates(userId, circleId);
+  const receivedSupport = useReceivedCircleSupport(userId, circleId);
   const bootstrap = useBootstrap(userId);
   const grantsList = useShareGrants(userId);
   const grants = useCreateShareGrant(userId);
@@ -125,8 +130,11 @@ export default function CircleDetailPage() {
   const [revokeId, setRevokeId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
-  const [reportTargetType, setReportTargetType] = useState<"circle" | "user">("circle");
+  const [reportTargetType, setReportTargetType] = useState<"circle" | "user" | "content">(
+    "circle"
+  );
   const [reportTargetId, setReportTargetId] = useState("");
+  const [reportTargetUserId, setReportTargetUserId] = useState("");
   const [reportCategory, setReportCategory] = useState<SafetyReportCategory>("other");
   const [reportDetail, setReportDetail] = useState("");
 
@@ -149,6 +157,19 @@ export default function CircleDetailPage() {
     } catch {
       toast.error("Could not copy link");
     }
+  };
+
+  const reportContent = (request: {
+    targetId: string;
+    targetUserId: string;
+    detail: string;
+  }) => {
+    setReportTargetType("content");
+    setReportTargetId(request.targetId);
+    setReportTargetUserId(request.targetUserId);
+    setReportCategory("other");
+    setReportDetail(request.detail);
+    document.getElementById("circle-report-detail")?.focus();
   };
 
   const showPreview = async () => {
@@ -524,14 +545,15 @@ export default function CircleDetailPage() {
         <CardHeader>
           <CardTitle>What members chose to share</CardTitle>
           <CardDescription>
-            Only active, field-level grants from current members appear here.
+            Only active, field-level grants from current members appear here. Supportive reactions
+            and replies stay inside this circle.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {shared.data?.updates.length ? (
             <ul className="space-y-3">
-              {shared.data.updates.map((update, index) => (
-                <li key={`${update.ownerId}-${index}`} className="rounded-md border border-border p-3">
+              {shared.data.updates.map((update) => (
+                <li key={update.preview.grantId} className="rounded-md border border-border p-3">
                   <p className="text-sm font-medium">{update.ownerName}</p>
                   <ul className="mt-2 space-y-1">
                     {update.preview.fields.map((field) => (
@@ -540,6 +562,12 @@ export default function CircleDetailPage() {
                       </li>
                     ))}
                   </ul>
+                  <CircleSupportPanel
+                    userId={userId}
+                    circleId={circleId}
+                    update={update}
+                    onReport={reportContent}
+                  />
                 </li>
               ))}
             </ul>
@@ -550,6 +578,25 @@ export default function CircleDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {receivedSupport.data?.support.some(
+        (item) =>
+          item.interactions.comments.length > 0 ||
+          Object.values(item.interactions.reactions.counts).some((count) => count > 0)
+      ) ? (
+        <CircleReceivedSupportPanel
+          userId={userId}
+          circleId={circleId}
+          support={receivedSupport.data.support}
+          onReport={reportContent}
+        />
+      ) : null}
+
+      <CircleChallengesPanel
+        userId={userId}
+        circleId={circleId}
+        onReport={reportContent}
+      />
 
       <Card className="border-border bg-card">
         <CardHeader>
@@ -605,8 +652,9 @@ export default function CircleDetailPage() {
               <Select
                 value={reportTargetType}
                 onValueChange={(value) => {
-                  setReportTargetType(value as "circle" | "user");
+                  setReportTargetType(value as "circle" | "user" | "content");
                   setReportTargetId("");
+                  setReportTargetUserId("");
                 }}
               >
                 <SelectTrigger id="report-target-type" className="min-h-11 w-full">
@@ -615,6 +663,7 @@ export default function CircleDetailPage() {
                 <SelectContent>
                   <SelectItem value="circle">This circle</SelectItem>
                   <SelectItem value="user">A member</SelectItem>
+                  <SelectItem value="content">Shared content</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -635,6 +684,16 @@ export default function CircleDetailPage() {
                       ))}
                   </SelectContent>
                 </Select>
+              </div>
+            ) : null}
+            {reportTargetType === "content" ? (
+              <div className="space-y-2">
+                <Label>Shared content</Label>
+                <p className="text-xs text-muted-foreground">
+                  {reportTargetId
+                    ? "A comment or challenge is selected. Add what happened below."
+                    : "Use Report on a comment or challenge to select it here."}
+                </p>
               </div>
             ) : null}
             <div className="space-y-2">
@@ -670,6 +729,7 @@ export default function CircleDetailPage() {
             disabled={
               !reportDetail.trim() ||
               (reportTargetType === "user" && !reportTargetId) ||
+              (reportTargetType === "content" && (!reportTargetId || !reportTargetUserId)) ||
               createReport.isPending
             }
             onClick={() => {
@@ -677,11 +737,18 @@ export default function CircleDetailPage() {
               createReport.mutate({
                 targetType: reportTargetType,
                 targetId,
-                targetUserId: reportTargetType === "user" ? targetId : null,
+                targetUserId:
+                  reportTargetType === "user"
+                    ? targetId
+                    : reportTargetType === "content"
+                      ? reportTargetUserId
+                      : null,
                 category: reportCategory,
                 detail: reportDetail.trim(),
               });
               setReportDetail("");
+              setReportTargetId("");
+              setReportTargetUserId("");
             }}
           >
             Save report
@@ -765,8 +832,8 @@ export default function CircleDetailPage() {
           <DialogHeader>
             <DialogTitle>Leave this circle?</DialogTitle>
             <DialogDescription>
-              Your membership ends and your sharing grants to this circle are revoked. You will not
-              see future shared updates here.
+              Your membership ends, your sharing grants are revoked, and your reactions, comments,
+              and challenges in this circle are removed. You will not see future updates here.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

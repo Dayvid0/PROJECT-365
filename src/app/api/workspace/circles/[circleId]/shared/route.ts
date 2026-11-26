@@ -9,8 +9,8 @@ interface Context {
 }
 
 /**
- * Circle visibility is grant-driven only: no automatic feed, reactions,
- * comments, or challenges are part of this endpoint.
+ * Circle visibility is grant-driven only. Supportive interactions are included
+ * only when they attach to a still-active, consented update in this circle.
  */
 export async function GET(_request: Request, context: Context) {
   try {

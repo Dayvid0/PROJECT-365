@@ -83,8 +83,9 @@ export default function CirclesPage() {
           <p className="text-xs text-muted-foreground">
             Circles are never searchable or public. You invite people by their exact email address,
             they review what joining means before accepting, and every habit field still needs a
-            separate preview and your explicit consent. There are no reactions, comments,
-            leaderboards, or challenges here.
+            separate preview and your explicit consent. Supportive reactions, replies, and private
+            challenges stay inside the circle. There is no public discovery, direct messaging, or
+            leaderboard.
           </p>
         </CardContent>
       </Card>

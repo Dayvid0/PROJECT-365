@@ -39,8 +39,9 @@ export default function PrivacyPage() {
           <p>
             If you use accountability, we also store invites, the connections you accept, the exact
             fields you choose to share, and any block, mute, or report records you create. Circles
-            add their names, purposes, memberships, and exact-email invitations. None of this is
-            created without an action you take.
+            add their names, purposes, memberships, exact-email invitations, supportive reactions,
+            replies, circle-local challenges, and challenge participation. None of this is created
+            without an action you take.
           </p>
         </CardContent>
       </Card>
@@ -98,8 +99,13 @@ export default function PrivacyPage() {
             current members.
           </p>
           <p>
-            There are no public profiles, no user search or discovery, no direct messages, no
-            leaderboards, no reactions or comments, and no public challenges.
+            Within a circle, members can send anonymous supportive reactions and written replies on
+            updates that are still visible through an active grant. They can also start and join
+            private challenges; only the participant count is shown, never names, progress, or a
+            ranking. These interactions are visible only to current members of that circle. There
+            are no public profiles, no user search or discovery, no direct messages, no leaderboards,
+            and no public challenges. Public discovery stays disabled until moderation readiness is
+            in place.
           </p>
         </CardContent>
       </Card>
@@ -161,8 +167,8 @@ export default function PrivacyPage() {
             Settings has a permanent Delete account action. After you type your account email to
             confirm, it removes your profile, sessions, preferences, habits, schedules, check-ins,
             notes, reminders, weekly reflections, sharing grants, circles you own, memberships,
-            invites, and safety records in one transaction. Your sign-in cookies are cleared as part
-            of that request.
+            invites, reactions, comments, challenges, challenge participation, and safety records in
+            one transaction. Your sign-in cookies are cleared as part of that request.
           </p>
           <p>
             Export a JSON backup first if you want a copy. Deletion is immediate and cannot be

@@ -338,10 +338,58 @@ export interface CircleInvite {
   createdAt: string;
 }
 
+export type CircleReactionKind = "cheer" | "support" | "respect";
+
+export interface CircleReactionSummary {
+  grantId: string;
+  counts: Record<CircleReactionKind, number>;
+  viewerReaction: CircleReactionKind | null;
+}
+
+export interface CircleComment {
+  id: string;
+  circleId: string;
+  grantId: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+  canDelete: boolean;
+}
+
+export interface CircleUpdateInteraction {
+  grantId: string;
+  reactions: CircleReactionSummary;
+  comments: CircleComment[];
+}
+
+/** Support on the viewer's own grants; never includes other members' habit data. */
+export interface CircleReceivedSupport {
+  grantId: string;
+  label: string;
+  interactions: CircleUpdateInteraction;
+}
+
 export interface CircleSharedUpdate {
   ownerId: string;
   ownerName: string;
   preview: SharePreview;
+  interactions: CircleUpdateInteraction;
+}
+
+export interface CircleChallenge {
+  id: string;
+  circleId: string;
+  creatorId: string;
+  creatorName: string;
+  title: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string;
+  participantCount: number;
+  viewerJoined: boolean;
+  canDelete: boolean;
+  createdAt: string;
 }
 
 export interface SharePreviewField {
