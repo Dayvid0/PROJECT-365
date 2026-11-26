@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { Download, LogOut, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -335,7 +336,7 @@ export default function SettingsPage() {
           </div>
           {pendingCount > 0 ? (
             <div className="space-y-2 border-t border-border pt-4">
-              <p className="text-xs text-amber-600 dark:text-amber-400">
+              <p className="text-xs text-amber-800 dark:text-amber-300">
                 {pendingCount} offline change{pendingCount === 1 ? "" : "s"} still waiting to sync.
                 Exports do not include them yet, and a restore will discard them.
               </p>
@@ -358,6 +359,21 @@ export default function SettingsPage() {
         <CardContent>
           <Button variant="outline" asChild>
             <a href="/app/accountability">Manage accountability</a>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle>Privacy</CardTitle>
+          <CardDescription>
+            What is stored, what syncs offline, how sharing works, and what exports include — in
+            plain language.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" asChild>
+            <Link href="/app/privacy">Read privacy details</Link>
           </Button>
         </CardContent>
       </Card>

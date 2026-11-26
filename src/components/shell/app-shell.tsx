@@ -44,6 +44,14 @@ export function AppShell({
   const isOnline = useOnlineStatus();
   const pendingCount = useWorkspaceUIStore((state) => state.pendingLogs.length);
   const displayNameNow = bootstrap?.user?.name ?? displayName;
+  const checkInLabel = `${pendingCount} check-in${pendingCount === 1 ? "" : "s"}`;
+  const syncStatus = !isOnline
+    ? pendingCount > 0
+      ? `Offline — ${checkInLabel} saved on this device. Other changes need a connection.`
+      : "Offline — check-ins will save on this device. Other changes need a connection."
+    : pendingCount > 0
+      ? `Back online — ${checkInLabel} still waiting to sync. Other changes save only while connected.`
+      : "Online — check-ins sync automatically. Other changes save only while connected.";
 
   return (
     <div className="min-h-screen">
@@ -96,14 +104,32 @@ export function AppShell({
             <CalendarCheck2 className="size-5 text-primary" />
             PROJECT_365
           </div>
-          <div className="hidden text-xs text-muted-foreground md:block">
-            {isOnline ? "All changes sync automatically" : "Working offline — changes are saved locally"}
+          <div
+            aria-live="polite"
+            aria-atomic="true"
+            className="sr-only text-xs text-muted-foreground md:not-sr-only"
+          >
+            {syncStatus}
+            {pendingCount > 0 ? (
+              <Link href="/app/settings" className="ml-1 underline underline-offset-2">
+                Review pending changes
+              </Link>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
-            {!isOnline || pendingCount > 0 ? (
+            {pendingCount > 0 ? (
+              <Link
+                href="/app/settings"
+                aria-label={`${checkInLabel} waiting to sync. Review in Settings.`}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <CloudOff className="size-3" />
+                {pendingCount} pending
+              </Link>
+            ) : !isOnline ? (
               <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
                 <CloudOff className="size-3" />
-                {pendingCount > 0 ? `${pendingCount} pending` : "Offline"}
+                Offline
               </span>
             ) : null}
             <ThemeToggle compact />

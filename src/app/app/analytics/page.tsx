@@ -92,14 +92,19 @@ export default function AnalyticsPage() {
           <h1 className="text-2xl font-extrabold tracking-tight">Analytics</h1>
           <p className="text-sm text-muted-foreground">Trends across scheduled opportunities, not just logged days.</p>
         </div>
-        <div className="flex rounded-md border border-border bg-muted p-1">
+        <div
+          role="group"
+          aria-label="Analytics view"
+          className="flex rounded-md border border-border bg-muted p-1"
+        >
           {MODES.map((mode) => (
             <button
               key={mode}
               type="button"
+              aria-pressed={viewMode === mode}
               onClick={() => setViewMode(mode)}
               className={cn(
-                "rounded px-3 py-1.5 text-xs font-semibold capitalize",
+                "rounded px-3 py-1.5 text-xs font-semibold capitalize focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                 viewMode === mode ? "bg-primary text-primary-foreground" : "text-muted-foreground"
               )}
             >

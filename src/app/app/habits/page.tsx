@@ -193,15 +193,16 @@ export default function HabitsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Category</Label>
-                <div className="flex flex-wrap gap-1.5">
+                <span className="text-sm font-medium">Category</span>
+                <div role="group" aria-label="Category" className="flex flex-wrap gap-1.5">
                   {HABIT_CATEGORIES.map((category) => (
                     <button
                       key={category}
                       type="button"
+                      aria-pressed={form.category === category}
                       onClick={() => setForm({ ...form, category })}
                       className={cn(
-                        "rounded-full border px-2.5 py-1 text-xs font-medium capitalize",
+                        "rounded-full border px-2.5 py-1 text-xs font-medium capitalize focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                         form.category === category
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border text-muted-foreground"
@@ -213,16 +214,17 @@ export default function HabitsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Colour</Label>
-                <div className="flex flex-wrap gap-2">
+                <span className="text-sm font-medium">Colour</span>
+                <div role="group" aria-label="Colour" className="flex flex-wrap gap-2">
                   {PRESET_HABIT_COLORS.map((color) => (
                     <button
                       key={color}
                       type="button"
                       aria-label={`Choose ${color}`}
+                      aria-pressed={form.color === color}
                       onClick={() => setForm({ ...form, color })}
                       className={cn(
-                        "size-7 rounded-full border-2 transition-transform hover:scale-110",
+                        "size-7 rounded-full border-2 transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                         form.color === color ? "border-foreground" : "border-transparent"
                       )}
                       style={{ backgroundColor: color }}

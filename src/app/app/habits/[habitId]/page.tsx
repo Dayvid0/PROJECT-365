@@ -215,15 +215,15 @@ export default function HabitDetailPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Days (all days if none selected)</Label>
-              <div className="flex flex-wrap gap-1.5">
+              <span className="text-sm font-medium">Days (all days if none selected)</span>
+              <div role="group" aria-label="Reminder days" className="flex flex-wrap gap-1.5">
                 {WEEKDAY_LABELS.map((label, day) => (
                   <button
                     key={day}
                     type="button"
                     aria-pressed={reminder.weekdays.includes(day)}
                     onClick={() => toggleWeekday(day)}
-                    className={`tap-target rounded-full border px-3 text-xs font-medium ${
+                    className={`tap-target rounded-full border px-3 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
                       reminder.weekdays.includes(day)
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border text-muted-foreground"

@@ -171,6 +171,7 @@ export function TodayHabitCard({
             />
             <Button
               variant="secondary"
+              aria-label={`Set amount for ${habit.name}`}
               disabled={busy || countDraft.trim() === ""}
               onClick={() => {
                 const parsed = Number(countDraft);
@@ -197,6 +198,7 @@ export function TodayHabitCard({
           {timer.startedAt === null ? (
             <Button
               disabled={busy}
+              aria-label={`${elapsedSeconds > 0 ? "Resume" : "Start"} timer for ${habit.name}`}
               onClick={() => setTimer({ accumulatedSeconds: elapsedSeconds, startedAt: Date.now() })}
             >
               <Play /> {elapsedSeconds > 0 ? "Resume" : "Start"}
@@ -205,6 +207,7 @@ export function TodayHabitCard({
             <Button
               variant="secondary"
               disabled={busy}
+              aria-label={`Pause timer for ${habit.name}`}
               onClick={() => setTimer({ accumulatedSeconds: elapsedSeconds, startedAt: null })}
             >
               <Pause /> Pause
@@ -212,6 +215,7 @@ export function TodayHabitCard({
           )}
           <Button
             variant="outline"
+            aria-label={`Finish timer for ${habit.name}`}
             disabled={busy || elapsedSeconds === 0}
             onClick={() =>
               void run(async () => {
@@ -288,7 +292,12 @@ export function TodayHabitCard({
               : "Nothing due today. Enjoy the breathing room."}
           </p>
           {exception && onUnskip && (
-            <Button variant="outline" size="sm" onClick={() => void run(onUnskip)}>
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label={`Put ${habit.name} back on the schedule`}
+              onClick={() => void run(onUnskip)}
+            >
               <RotateCcw /> Put it back on the schedule
             </Button>
           )}
@@ -301,6 +310,7 @@ export function TodayHabitCard({
             variant="ghost"
             size="sm"
             aria-expanded={details}
+            aria-label={`Note for ${habit.name}`}
             onClick={() => {
               setNoteDraft(primaryLog?.note ?? "");
               setDetails((open) => !open);
@@ -309,12 +319,23 @@ export function TodayHabitCard({
             <MoreHorizontal /> Note
           </Button>
           {!allDone && (
-            <Button variant="ghost" size="sm" onClick={() => setConfirmSkip(true)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Skip ${habit.name} today`}
+              onClick={() => setConfirmSkip(true)}
+            >
               Skip today
             </Button>
           )}
           {logs.length > 0 && (
-            <Button variant="ghost" size="sm" disabled={busy} onClick={() => void run(onUndo)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Undo check-in for ${habit.name}`}
+              disabled={busy}
+              onClick={() => void run(onUndo)}
+            >
               <RotateCcw /> Undo check-in
             </Button>
           )}
@@ -340,7 +361,12 @@ export function TodayHabitCard({
             value={noteDraft}
             onChange={(event) => setNoteDraft(event.target.value)}
           />
-          <Button type="submit" variant="secondary" disabled={busy}>
+          <Button
+            type="submit"
+            variant="secondary"
+            aria-label={`Save note for ${habit.name}`}
+            disabled={busy}
+          >
             Save note
           </Button>
         </form>
