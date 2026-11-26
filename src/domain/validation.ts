@@ -26,6 +26,17 @@ export const dateSchema = z
     return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
   }, "Date must be a real calendar date.");
 
+export const weeklyReviewQuerySchema = z.object({
+  week: dateSchema.optional(),
+});
+
+export const weeklyNoteSchema = z.object({
+  week: dateSchema,
+  note: z.string().trim().max(2000, "Keep your reflection under 2000 characters."),
+});
+
+export type WeeklyNoteInput = z.infer<typeof weeklyNoteSchema>;
+
 export const statusSchema = z.union([
   z.literal(0),
   z.literal(0.5),

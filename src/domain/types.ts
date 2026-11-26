@@ -140,6 +140,41 @@ export interface ProgressSummary {
   completionRate: number;
 }
 
+export interface WeeklyHabitReview {
+  habitId: string;
+  name: string;
+  color: string;
+  current: ProgressSummary;
+  previous: ProgressSummary;
+  /** Percentage-point change against the user's own prior week; null when no prior schedule existed. */
+  delta: number | null;
+}
+
+export interface WeeklyContextNote {
+  habitId: string | null;
+  habitName: string | null;
+  date: string;
+  note: string;
+}
+
+/** Private, self-referential review. No other user appears in this projection. */
+export interface WeeklyReview {
+  weekStart: string;
+  weekEnd: string;
+  previousWeekStart: string;
+  previousWeekEnd: string;
+  current: ProgressSummary;
+  previous: ProgressSummary;
+  /** Percentage-point change against the user's own prior week; null when no prior schedule existed. */
+  delta: number | null;
+  habits: WeeklyHabitReview[];
+  /** Context notes attached to check-ins in the reviewed week. */
+  contextNotes: WeeklyContextNote[];
+  /** Optional private reflection for this week. */
+  note: string | null;
+  generatedAt: string;
+}
+
 export interface MonthlySnapshot {
   month: string;
   completionRate: number;

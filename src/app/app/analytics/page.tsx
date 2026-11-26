@@ -14,6 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import { BarChart3 } from "lucide-react";
+import { WeeklyReviewPanel } from "@/components/analytics/weekly-review-panel";
 import {
   Card,
   CardContent,
@@ -107,6 +108,8 @@ export default function AnalyticsPage() {
           ))}
         </div>
       </div>
+
+      <WeeklyReviewPanel userId={userId} />
 
       {isError ? (
         <Card className="border-destructive/40">

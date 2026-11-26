@@ -40,6 +40,18 @@ export const userPreferences = sqliteTable("user_preferences", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 
+/** One private reflection per calendar week. Never part of any shared projection. */
+export const weeklyReviews = sqliteTable(
+  "weekly_reviews",
+  {
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    weekStart: text("week_start").notNull(),
+    note: text("note"),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.weekStart] })]
+);
+
 export const habits = sqliteTable(
   "habits",
   {

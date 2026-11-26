@@ -15,6 +15,8 @@ export const workspaceKeys = {
     ["workspace", userId, "snapshot", month] as const,
   analytics: (userId: string, months: number) =>
     ["workspace", userId, "analytics", months] as const,
+  weeklyReview: (userId: string, week: string) =>
+    ["workspace", userId, "weekly-review", week] as const,
 };
 
 export function clearWorkspaceCache(queryClient: QueryClient, userId?: string): void {
