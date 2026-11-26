@@ -182,3 +182,95 @@ export interface AnalyticsRangeData {
   exceptions: ScheduleException[];
   months: string[];
 }
+
+// --- Consent-based accountability primitives -------------------------------
+// Nothing here creates public discovery. Every projection must derive from an
+// active ShareGrant; solo tracking remains complete without any of these.
+
+export type ShareAudience = "partner" | "circle";
+
+export type ShareField =
+  | "name"
+  | "alias"
+  | "status"
+  | "quantity"
+  | "note"
+  | "history";
+
+export type ShareFrequency =
+  | "every_check_in"
+  | "weekly_summary"
+  | "milestone_only"
+  | "none";
+
+export interface ShareGrant {
+  id: string;
+  ownerId: string;
+  audience: ShareAudience;
+  recipientId: string | null;
+  circleId: string | null;
+  habitId: string;
+  alias: string | null;
+  fields: ShareField[];
+  frequency: ShareFrequency;
+  consentVersion: number;
+  startsAt: string;
+  endsAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SharePreviewField {
+  field: ShareField;
+  label: string;
+  value: string;
+}
+
+export interface SharePreview {
+  grantId: string;
+  audience: ShareAudience;
+  audienceLabel: string;
+  frequency: ShareFrequency;
+  frequencyLabel: string;
+  fields: SharePreviewField[];
+  revocationNotice: string;
+}
+
+export type SafetyControlKind = "block" | "mute" | "leave";
+
+export interface SafetyControl {
+  id: string;
+  userId: string;
+  kind: SafetyControlKind;
+  targetUserId: string | null;
+  circleId: string | null;
+  createdAt: string;
+  expiresAt: string | null;
+}
+
+export type SafetyReportTargetType = "user" | "content" | "circle";
+export type SafetyReportCategory =
+  | "harassment"
+  | "shame_pressure"
+  | "privacy"
+  | "spam"
+  | "other";
+export type SafetyReportStatus =
+  | "open"
+  | "reviewing"
+  | "resolved"
+  | "dismissed";
+
+export interface SafetyReport {
+  id: string;
+  reporterId: string;
+  targetType: SafetyReportTargetType;
+  targetId: string;
+  targetUserId: string | null;
+  category: SafetyReportCategory;
+  detail: string;
+  status: SafetyReportStatus;
+  createdAt: string;
+  updatedAt: string;
+}

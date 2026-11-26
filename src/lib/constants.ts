@@ -22,6 +22,39 @@ export const SCHEDULE_EXCEPTION_KINDS = ["skip", "planned_break"] as const;
 
 export const STREAK_POLICIES = ["strict", "target", "off"] as const;
 
+/** Sharing is opt-in and field-level; "none" still keeps the grant for revocation history. */
+export const SHARE_AUDIENCES = ["partner", "circle"] as const;
+export const SHARE_FIELDS = [
+  "name",
+  "alias",
+  "status",
+  "quantity",
+  "note",
+  "history",
+] as const;
+export const SHARE_FREQUENCIES = [
+  "every_check_in",
+  "weekly_summary",
+  "milestone_only",
+  "none",
+] as const;
+
+export const SAFETY_CONTROL_KINDS = ["block", "mute", "leave"] as const;
+export const REPORT_TARGET_TYPES = ["user", "content", "circle"] as const;
+export const REPORT_CATEGORIES = [
+  "harassment",
+  "shame_pressure",
+  "privacy",
+  "spam",
+  "other",
+] as const;
+export const REPORT_STATUSES = [
+  "open",
+  "reviewing",
+  "resolved",
+  "dismissed",
+] as const;
+
 export const WEEKDAY_LABELS = [
   "Sun",
   "Mon",

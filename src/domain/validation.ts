@@ -4,7 +4,13 @@ import {
   CHECKIN_SOURCES,
   HABIT_CATEGORIES,
   HABIT_KINDS,
+  REPORT_CATEGORIES,
+  REPORT_TARGET_TYPES,
+  SAFETY_CONTROL_KINDS,
   SCHEDULE_EXCEPTION_KINDS,
+  SHARE_AUDIENCES,
+  SHARE_FIELDS,
+  SHARE_FREQUENCIES,
   STREAK_POLICIES,
 } from "@/lib/constants";
 
@@ -199,6 +205,65 @@ export const onboardingModeSchema = z.object({
   mode: z.enum(["defaults", "scratch"]),
 });
 
+const shareFieldsSchema = z
+  .array(z.enum(SHARE_FIELDS))
+  .min(1, "Choose at least one field to share.")
+  .max(SHARE_FIELDS.length)
+  .refine((value) => new Set(value).size === value.length, "Fields must be unique.");
+
+export const shareGrantSchema = z
+  .object({
+    audience: z.enum(SHARE_AUDIENCES),
+    recipientId: z.string().trim().min(1).max(128).nullable().optional(),
+    circleId: z.string().trim().min(1).max(128).nullable().optional(),
+    habitId: z.string().min(1).max(128),
+    alias: z.string().trim().min(1).max(80).nullable().optional(),
+    fields: shareFieldsSchema,
+    frequency: z.enum(SHARE_FREQUENCIES),
+    consentVersion: z.number().int().min(1).max(100).default(1),
+    startsAt: z.string().datetime({ offset: true }).optional(),
+    endsAt: z.string().datetime({ offset: true }).nullable().optional(),
+  })
+  .refine(
+    (value) =>
+      value.audience === "partner"
+        ? Boolean(value.recipientId) && !value.circleId
+        : Boolean(value.circleId) && !value.recipientId,
+    "Partner grants need a recipient; circle grants need a circle."
+  )
+  .refine(
+    (value) => !value.fields.includes("alias") || Boolean(value.alias),
+    "An alias is required when the alias field is shared."
+  )
+  .refine((value) => {
+    if (!value.endsAt) return true;
+    const start = value.startsAt ? new Date(value.startsAt) : new Date();
+    return new Date(value.endsAt) > start;
+  }, "The end time must be after the start time.");
+
+export const safetyControlSchema = z
+  .object({
+    kind: z.enum(SAFETY_CONTROL_KINDS),
+    targetUserId: z.string().trim().min(1).max(128).nullable().optional(),
+    circleId: z.string().trim().min(1).max(128).nullable().optional(),
+    expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
+  })
+  .refine(
+    (value) =>
+      value.kind === "leave"
+        ? Boolean(value.circleId) && !value.targetUserId
+        : Boolean(value.targetUserId) && !value.circleId,
+    "Blocking and muting need a user; leaving needs a circle."
+  );
+
+export const safetyReportSchema = z.object({
+  targetType: z.enum(REPORT_TARGET_TYPES),
+  targetId: z.string().trim().min(1).max(128),
+  targetUserId: z.string().trim().min(1).max(128).nullable().optional(),
+  category: z.enum(REPORT_CATEGORIES),
+  detail: z.string().trim().min(1).max(2000),
+});
+
 export type CreateHabitInput = z.infer<typeof createHabitSchema>;
 export type UpdateHabitInput = z.infer<typeof updateHabitSchema>;
 export type UpsertLogsInput = z.infer<typeof upsertLogsSchema>;
@@ -208,3 +273,6 @@ export type ProfilePatchInput = z.infer<typeof profilePatchSchema>;
 export type PreferencesPatchSchemaType = z.infer<typeof preferencesPatchSchema>;
 export type DeleteLogInput = z.infer<typeof deleteLogSchema>;
 export type HabitReminderInput = z.infer<typeof habitReminderSchema>;
+export type ShareGrantInput = z.infer<typeof shareGrantSchema>;
+export type SafetyControlInput = z.infer<typeof safetyControlSchema>;
+export type SafetyReportInput = z.infer<typeof safetyReportSchema>;

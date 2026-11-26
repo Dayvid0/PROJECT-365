@@ -15,9 +15,16 @@ import {
   CHECKIN_SOURCES,
   HABIT_CATEGORIES,
   HABIT_KINDS,
+  REPORT_CATEGORIES,
+  REPORT_STATUSES,
+  REPORT_TARGET_TYPES,
+  SAFETY_CONTROL_KINDS,
   SCHEDULE_EXCEPTION_KINDS,
+  SHARE_AUDIENCES,
+  SHARE_FREQUENCIES,
   STREAK_POLICIES,
 } from "@/lib/constants";
+import type { ShareField } from "@/domain/types";
 import { users } from "./auth";
 
 export const userPreferences = sqliteTable("user_preferences", {
@@ -168,6 +175,87 @@ export const habitReminders = sqliteTable(
   (table) => [
     uniqueIndex("habit_reminders_user_habit_uidx").on(table.userId, table.habitId),
     index("habit_reminders_user_enabled_idx").on(table.userId, table.enabled),
+  ]
+);
+
+/**
+ * Consent records. A grant is the only source of truth for shared projections;
+ * revocation stops future access without pretending already-seen content vanished.
+ */
+export const shareGrants = sqliteTable(
+  "share_grants",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    audience: text("audience", { enum: SHARE_AUDIENCES }).notNull(),
+    habitId: text("habit_id").notNull().references(() => habits.id, { onDelete: "cascade" }),
+    recipientUserId: text("recipient_user_id").references(() => users.id, { onDelete: "cascade" }),
+    circleId: text("circle_id"),
+    alias: text("alias"),
+    fields: text("fields", { mode: "json" }).$type<ShareField[]>().notNull(),
+    frequency: text("frequency", { enum: SHARE_FREQUENCIES }).notNull(),
+    consentVersion: integer("consent_version").notNull().default(1),
+    startsAt: integer("starts_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    endsAt: integer("ends_at", { mode: "timestamp_ms" }),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("share_grants_user_habit_idx").on(table.userId, table.habitId),
+    index("share_grants_recipient_idx").on(table.recipientUserId),
+    check(
+      "share_grants_audience_target_check",
+      sql`((${table.audience} = 'partner' AND ${table.recipientUserId} IS NOT NULL AND ${table.circleId} IS NULL) OR (${table.audience} = 'circle' AND ${table.circleId} IS NOT NULL AND ${table.recipientUserId} IS NULL))`
+    ),
+  ]
+);
+
+/** User-controlled boundaries: block, mute, or leave. No support-only path. */
+export const safetyControls = sqliteTable(
+  "safety_controls",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: SAFETY_CONTROL_KINDS }).notNull(),
+    targetUserId: text("target_user_id").references(() => users.id, { onDelete: "cascade" }),
+    circleId: text("circle_id"),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("safety_controls_user_target_uidx").on(
+      table.userId,
+      table.kind,
+      table.targetUserId,
+      table.circleId
+    ),
+    check(
+      "safety_controls_target_check",
+      sql`((${table.kind} = 'leave' AND ${table.circleId} IS NOT NULL AND ${table.targetUserId} IS NULL) OR (${table.kind} <> 'leave' AND ${table.targetUserId} IS NOT NULL AND ${table.circleId} IS NULL))`
+    ),
+  ]
+);
+
+/** Reports stay visible to the reporter; moderation workflow comes later. */
+export const safetyReports = sqliteTable(
+  "safety_reports",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    reporterUserId: text("reporter_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    targetType: text("target_type", { enum: REPORT_TARGET_TYPES }).notNull(),
+    targetId: text("target_id").notNull(),
+    targetUserId: text("target_user_id").references(() => users.id, { onDelete: "cascade" }),
+    category: text("category", { enum: REPORT_CATEGORIES }).notNull(),
+    detail: text("detail").notNull(),
+    status: text("status", { enum: REPORT_STATUSES }).notNull().default("open"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("safety_reports_reporter_idx").on(table.reporterUserId),
+    index("safety_reports_target_user_idx").on(table.targetUserId),
+    index("safety_reports_status_idx").on(table.status),
   ]
 );
 
