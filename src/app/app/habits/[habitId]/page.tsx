@@ -171,8 +171,8 @@ export default function HabitDetailPage() {
             <Bell className="size-4 text-muted-foreground" /> Reminder
           </CardTitle>
           <CardDescription>
-            Preferences are saved here. The web app does not send push notifications yet, so these
-            only appear as in-app nudges while a tab is open.
+            Preferences are saved here. The web app does not send push notifications; nudges appear
+            on Today while a tab is open. Snooze and dismiss are available there for this visit only.
           </CardDescription>
         </CardHeader>
         <CardContent>

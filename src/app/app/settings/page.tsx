@@ -211,8 +211,9 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Reminders</CardTitle>
           <CardDescription>
-            In-app reminders only work while this tab is open. Web push is not available yet, so
-            quiet hours are saved for future apps rather than enforced here.
+            In-app reminders only work while this tab is open. No push notifications are sent and
+            no OS permission is needed. Quiet hours are enforced here; snooze and dismiss last for
+            the current visit.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
