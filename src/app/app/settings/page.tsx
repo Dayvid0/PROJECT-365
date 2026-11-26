@@ -42,6 +42,7 @@ import {
   useUpdateProfile,
 } from "@/lib/hooks/use-workspace";
 import { useSignOut } from "@/lib/hooks/use-sign-out";
+import { useWorkspaceUIStore } from "@/stores/workspace-ui-store";
 
 interface ReminderPrefsDraft {
   enabled: boolean;
@@ -57,6 +58,7 @@ export default function SettingsPage() {
   const updatePreferences = useUpdatePreferences(userId);
   const restoreBackup = useRestoreBackup(userId);
   const signOut = useSignOut();
+  const pendingCount = useWorkspaceUIStore((state) => state.pendingLogs.length);
   const [draft, setDraft] = useState<{ name: string; timezone: string } | null>(null);
   const [streakDraft, setStreakDraft] = useState<StreakPolicy | null>(null);
   const [reminderDraft, setReminderDraft] = useState<ReminderPrefsDraft | null>(null);
@@ -64,6 +66,7 @@ export default function SettingsPage() {
   const [confirmRestore, setConfirmRestore] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   // Derived from the query result; no effect needed to sync server state into the form.
   const name = draft?.name ?? user?.name ?? "";
@@ -113,6 +116,12 @@ export default function SettingsPage() {
       setRestoreError(message);
       toast.error("Could not restore backup", { description: message });
     }
+  };
+
+  const discardPending = () => {
+    useWorkspaceUIStore.getState().clearPending();
+    setConfirmDiscard(false);
+    toast.success("Pending changes discarded");
   };
 
   return (
@@ -280,7 +289,8 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Data</CardTitle>
           <CardDescription>
-            Export a CSV of habits or a full JSON backup you can restore later.
+            Export a CSV of habits or a full JSON backup you can restore later. The JSON backup
+            includes schedules, skips, reminders, reminder settings, and private weekly notes.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -319,9 +329,21 @@ export default function SettingsPage() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              A full restore replaces every habit, schedule, log, and reminder in this account.
+              A full restore replaces every habit, schedule, log, reminder, preference, and private
+              weekly note in this account.
             </p>
           </div>
+          {pendingCount > 0 ? (
+            <div className="space-y-2 border-t border-border pt-4">
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                {pendingCount} offline change{pendingCount === 1 ? "" : "s"} still waiting to sync.
+                Exports do not include them yet, and a restore will discard them.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => setConfirmDiscard(true)}>
+                Discard pending changes
+              </Button>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -377,9 +399,12 @@ export default function SettingsPage() {
           <DialogHeader>
             <DialogTitle>Replace your workspace?</DialogTitle>
             <DialogDescription>
-              This deletes your current habits, schedules, logs, and reminders, then restores the
-              uploaded file. Export a fresh JSON backup first if you want a safety copy. This
-              cannot be undone.
+              This deletes your current habits, schedules, logs, reminders, preferences, and private
+              weekly notes, then restores the uploaded file. Export a fresh JSON backup first if you
+              want a safety copy. This cannot be undone.
+              {pendingCount > 0
+                ? ` ${pendingCount} offline change${pendingCount === 1 ? "" : "s"} will also be discarded.`
+                : ""}
             </DialogDescription>
           </DialogHeader>
           {restoreError ? (
@@ -394,6 +419,22 @@ export default function SettingsPage() {
             >
               Replace my workspace
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Discard pending changes?</DialogTitle>
+            <DialogDescription>
+              The {pendingCount} check-in{pendingCount === 1 ? "" : "s"} waiting on this device will
+              be removed. Saved server data is not affected.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDiscard(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={discardPending}>Discard</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

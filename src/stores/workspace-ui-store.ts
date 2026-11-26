@@ -8,7 +8,10 @@ import { logKey } from "@/domain/calculations";
 interface WorkspaceUIState {
   isOnline: boolean;
   pendingLogs: HabitLog[];
+  /** Held during full restore so stale habit ids cannot flush into a replaced workspace. */
+  flushPaused: boolean;
   setIsOnline: (isOnline: boolean) => void;
+  setFlushPaused: (flushPaused: boolean) => void;
   enqueueLogs: (logs: HabitLog[]) => void;
   removeLogs: (logs: HabitLog[]) => void;
   clearPending: () => void;
@@ -23,7 +26,9 @@ export const useWorkspaceUIStore = create<WorkspaceUIState>()(
     (set) => ({
       isOnline: true,
       pendingLogs: [],
+      flushPaused: false,
       setIsOnline: (isOnline) => set({ isOnline }),
+      setFlushPaused: (flushPaused) => set({ flushPaused }),
       enqueueLogs: (logs) =>
         set((state) => {
           const byKey = new Map(state.pendingLogs.map((log) => [logKey(log), log]));

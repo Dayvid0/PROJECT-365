@@ -7,7 +7,7 @@ import {
   scheduledOpportunitiesForRange,
 } from "@/domain/schedule";
 import { buildDefaultHabits } from "@/domain/defaults";
-import { buildWorkspaceBackup } from "@/domain/backup";
+import { buildWorkspaceBackup, validateBackupIntegrity } from "@/domain/backup";
 import type { WorkspaceBackupInput } from "@/domain/backup";
 import type {
   AnalyticsRangeData,
@@ -42,6 +42,7 @@ import {
   monthlySnapshots,
   userPreferences,
   users,
+  weeklyReviews,
   type HabitLogRow,
   type HabitReminderRow,
   type HabitRow,
@@ -818,7 +819,7 @@ export const workspaceRepository = {
   },
 
   async getWorkspaceBackup(userId: string) {
-    const [profile, habitList, scheduleList, exceptionList, logList, reminderList] =
+    const [profile, habitList, scheduleList, exceptionList, logList, reminderList, noteRows] =
       await Promise.all([
         getProfile(userId),
         listHabits(userId),
@@ -826,6 +827,14 @@ export const workspaceRepository = {
         listExceptions(userId),
         listAllLogsForUser(userId),
         listReminders(userId),
+        db
+          .select({
+            weekStart: weeklyReviews.weekStart,
+            note: weeklyReviews.note,
+            updatedAt: weeklyReviews.updatedAt,
+          })
+          .from(weeklyReviews)
+          .where(eq(weeklyReviews.userId, userId)),
       ]);
     return buildWorkspaceBackup({
       profile,
@@ -834,6 +843,11 @@ export const workspaceRepository = {
       exceptions: exceptionList,
       logs: logList,
       reminders: reminderList,
+      weeklyNotes: noteRows.map((row) => ({
+        weekStart: row.weekStart,
+        note: row.note,
+        updatedAt: row.updatedAt.toISOString(),
+      })),
     });
   },
 
@@ -843,20 +857,8 @@ export const workspaceRepository = {
    */
   async restoreWorkspace(userId: string, backup: WorkspaceBackupInput): Promise<void> {
     await ensurePreferences(userId);
-    const seenHabitIds = new Set<string>();
-    for (const habit of backup.habits) {
-      if (seenHabitIds.has(habit.id)) {
-        throw new ValidationError("Backup contains duplicate habit ids.");
-      }
-      seenHabitIds.add(habit.id);
-    }
-    for (const collection of [backup.schedules, backup.exceptions, backup.logs, backup.reminders]) {
-      for (const item of collection) {
-        if (!seenHabitIds.has(item.habitId)) {
-          throw new ValidationError("Backup contains a record for an unknown habit.");
-        }
-      }
-    }
+    const [issue] = validateBackupIntegrity(backup);
+    if (issue) throw new ValidationError(issue);
 
     await db.transaction(async (tx) => {
       await tx.delete(habitLogs).where(eq(habitLogs.userId, userId));
@@ -864,6 +866,7 @@ export const workspaceRepository = {
       await tx.delete(habitScheduleExceptions).where(eq(habitScheduleExceptions.userId, userId));
       await tx.delete(habitScheduleVersions).where(eq(habitScheduleVersions.userId, userId));
       await tx.delete(monthlySnapshots).where(eq(monthlySnapshots.userId, userId));
+      await tx.delete(weeklyReviews).where(eq(weeklyReviews.userId, userId));
       await tx.delete(habits).where(eq(habits.userId, userId));
 
       const habitIdMap = new Map<string, string>();
@@ -965,6 +968,15 @@ export const workspaceRepository = {
         });
       }
 
+      for (const item of backup.weeklyNotes) {
+        await tx.insert(weeklyReviews).values({
+          userId,
+          weekStart: item.weekStart,
+          note: item.note,
+          updatedAt: new Date(item.updatedAt),
+        });
+      }
+
       await tx.update(users)
         .set({ timezone: backup.profile.timezone, updatedAt: now })
         .where(eq(users.id, userId));
@@ -972,6 +984,9 @@ export const workspaceRepository = {
         .set({
           streakPolicy: backup.profile.streakPolicy,
           notificationTime: backup.profile.notificationTime,
+          remindersEnabled: backup.profile.remindersEnabled,
+          quietHoursStart: backup.profile.quietHoursStart,
+          quietHoursEnd: backup.profile.quietHoursEnd,
           updatedAt: now,
         })
         .where(eq(userPreferences.userId, userId));

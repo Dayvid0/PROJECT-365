@@ -259,11 +259,16 @@ export function useRestoreBackup(userId: string) {
         method: "POST",
         body: JSON.stringify(backup),
       }),
+    // Held until onSettled so a reconnect cannot flush stale habit ids mid-restore.
+    onMutate: () => useWorkspaceUIStore.getState().setFlushPaused(true),
     onSuccess: async () => {
+      // Queued logs carry old habit ids; after a restore those ids no longer exist.
+      useWorkspaceUIStore.getState().clearPending();
       await queryClient.invalidateQueries({ queryKey: workspaceKeys.userRoot(userId) });
       toast.success("Backup restored");
     },
     onError: (error) => toast.error("Could not restore backup", { description: errorMessage(error) }),
+    onSettled: () => useWorkspaceUIStore.getState().setFlushPaused(false),
   });
 }
 

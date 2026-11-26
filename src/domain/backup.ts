@@ -23,12 +23,28 @@ export interface WorkspaceBackup {
   format: typeof WORKSPACE_BACKUP_FORMAT;
   version: typeof WORKSPACE_BACKUP_VERSION;
   exportedAt: string;
-  profile: Pick<UserProfile, "timezone" | "streakPolicy" | "notificationTime">;
+  profile: Pick<
+    UserProfile,
+    | "timezone"
+    | "streakPolicy"
+    | "notificationTime"
+    | "remindersEnabled"
+    | "quietHoursStart"
+    | "quietHoursEnd"
+  >;
   habits: Habit[];
   schedules: HabitSchedule[];
   exceptions: ScheduleException[];
   logs: HabitLog[];
   reminders: HabitReminder[];
+  /** Private reflections only; never part of a share grant. */
+  weeklyNotes: WorkspaceWeeklyNote[];
+}
+
+export interface WorkspaceWeeklyNote {
+  weekStart: string;
+  note: string | null;
+  updatedAt: string;
 }
 
 export function buildWorkspaceBackup(input: {
@@ -38,6 +54,7 @@ export function buildWorkspaceBackup(input: {
   exceptions: ScheduleException[];
   logs: HabitLog[];
   reminders: HabitReminder[];
+  weeklyNotes: WorkspaceWeeklyNote[];
 }): WorkspaceBackup {
   return {
     format: WORKSPACE_BACKUP_FORMAT,
@@ -47,12 +64,16 @@ export function buildWorkspaceBackup(input: {
       timezone: input.profile.timezone,
       streakPolicy: input.profile.streakPolicy,
       notificationTime: input.profile.notificationTime,
+      remindersEnabled: input.profile.remindersEnabled,
+      quietHoursStart: input.profile.quietHoursStart,
+      quietHoursEnd: input.profile.quietHoursEnd,
     },
     habits: input.habits,
     schedules: input.schedules,
     exceptions: input.exceptions,
     logs: input.logs,
     reminders: input.reminders,
+    weeklyNotes: input.weeklyNotes,
   };
 }
 
@@ -69,6 +90,10 @@ export const workspaceBackupSchema = z.object({
     timezone: z.string().min(1).max(120),
     streakPolicy: z.enum(STREAK_POLICIES),
     notificationTime: timeSchema,
+    // Defaults keep backups exported before these fields existed restorable.
+    remindersEnabled: z.boolean().default(false),
+    quietHoursStart: timeSchema.default("22:00"),
+    quietHoursEnd: timeSchema.default("07:00"),
   }),
   habits: z.array(z.object({
     id: z.string().min(1),
@@ -138,6 +163,78 @@ export const workspaceBackupSchema = z.object({
     stopAfterCompletion: z.boolean().default(true),
     createdAt: isoSchema,
   })),
+  weeklyNotes: z.array(z.object({
+    weekStart: dateSchema,
+    note: z.string().nullable().default(null),
+    updatedAt: isoSchema,
+  })).default([]),
 });
 
 export type WorkspaceBackupInput = z.infer<typeof workspaceBackupSchema>;
+
+/**
+ * Referential checks that a transaction cannot describe in a user-facing way.
+ * Returned messages are safe to show directly in the restore dialog.
+ */
+export function validateBackupIntegrity(backup: WorkspaceBackupInput): string[] {
+  const issues: string[] = [];
+  const habitIds = new Set<string>();
+  for (const habit of backup.habits) {
+    if (habitIds.has(habit.id)) {
+      issues.push("Backup contains duplicate habit ids.");
+      break;
+    }
+    habitIds.add(habit.id);
+  }
+
+  const collections: Array<[string, Array<{ habitId: string }>]> = [
+    ["schedules", backup.schedules],
+    ["exceptions", backup.exceptions],
+    ["logs", backup.logs],
+    ["reminders", backup.reminders],
+  ];
+  for (const [label, items] of collections) {
+    if (items.some((item) => !habitIds.has(item.habitId))) {
+      issues.push(`Backup contains a ${label} record for an unknown habit.`);
+    }
+  }
+
+  const scheduleKeys = new Set<string>();
+  for (const item of backup.schedules) {
+    const key = `${item.habitId}:${item.version}`;
+    if (scheduleKeys.has(key)) {
+      issues.push("Backup contains duplicate schedule versions for a habit.");
+      break;
+    }
+    scheduleKeys.add(key);
+  }
+
+  const reminderHabits = new Set<string>();
+  for (const item of backup.reminders) {
+    if (reminderHabits.has(item.habitId)) {
+      issues.push("Backup contains more than one reminder for a habit.");
+      break;
+    }
+    reminderHabits.add(item.habitId);
+  }
+
+  const logKeys = new Set<string>();
+  for (const item of backup.logs) {
+    const key = `${item.habitId}:${item.date}:${item.occurrence ?? 1}`;
+    if (logKeys.has(key)) {
+      issues.push("Backup contains duplicate check-ins for a habit and date.");
+      break;
+    }
+    logKeys.add(key);
+  }
+
+  const weeks = new Set<string>();
+  for (const item of backup.weeklyNotes) {
+    if (weeks.has(item.weekStart)) {
+      issues.push("Backup contains duplicate weekly reflections.");
+      break;
+    }
+    weeks.add(item.weekStart);
+  }
+  return issues;
+}

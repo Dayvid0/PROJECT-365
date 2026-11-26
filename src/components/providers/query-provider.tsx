@@ -18,8 +18,9 @@ function ConnectivityBridge() {
     let flushing = false;
 
     const flushPending = async () => {
-      const pending = store.getState().pendingLogs;
-      if (flushing || !pending.length || !navigator.onLine) return;
+      const state = store.getState();
+      if (flushing || state.flushPaused || !state.pendingLogs.length || !navigator.onLine) return;
+      const pending = state.pendingLogs;
       flushing = true;
 
       try {

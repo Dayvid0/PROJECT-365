@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildWorkspaceBackup, workspaceBackupSchema } from "../backup";
+import {
+  buildWorkspaceBackup,
+  validateBackupIntegrity,
+  workspaceBackupSchema,
+  type WorkspaceBackupInput,
+} from "../backup";
 import type {
   Habit,
   HabitLog,
@@ -21,8 +26,8 @@ const profile: UserProfile = {
   onboardingCompleted: true,
   streakPolicy: "target",
   remindersEnabled: true,
-  quietHoursStart: "22:00",
-  quietHoursEnd: "07:00",
+  quietHoursStart: "21:30",
+  quietHoursEnd: "06:30",
   createdAt,
 };
 
@@ -99,31 +104,101 @@ const reminder: HabitReminder = {
   createdAt,
 };
 
+function backupFixture(overrides: Partial<Parameters<typeof buildWorkspaceBackup>[0]> = {}) {
+  return buildWorkspaceBackup({
+    profile,
+    habits: [habit],
+    schedules: [schedule],
+    exceptions: [exception],
+    logs: [log],
+    reminders: [reminder],
+    weeklyNotes: [{ weekStart: "2025-12-29", note: "A quiet week", updatedAt: createdAt }],
+    ...overrides,
+  });
+}
+
+function parse(input: unknown): WorkspaceBackupInput {
+  return workspaceBackupSchema.parse(input);
+}
+
 describe("workspace backup", () => {
   it("round-trips a complete workspace through the restore schema", () => {
-    const backup = buildWorkspaceBackup({
-      profile,
-      habits: [habit],
-      schedules: [schedule],
-      exceptions: [exception],
-      logs: [log],
-      reminders: [reminder],
-    });
+    const backup = backupFixture();
+    expect(parse(JSON.parse(JSON.stringify(backup)))).toEqual(backup);
+  });
 
-    expect(
-      workspaceBackupSchema.parse(JSON.parse(JSON.stringify(backup)))
-    ).toEqual(backup);
+  it("preserves reminder settings and private weekly notes", () => {
+    const backup = backupFixture();
+    expect(backup.profile.remindersEnabled).toBe(true);
+    expect(backup.profile.quietHoursStart).toBe("21:30");
+    expect(backup.profile.quietHoursEnd).toBe("06:30");
+    expect(backup.weeklyNotes).toEqual([
+      { weekStart: "2025-12-29", note: "A quiet week", updatedAt: createdAt },
+    ]);
+  });
+
+  it("restores backups exported before the newer fields existed", () => {
+    const backup = backupFixture();
+    const legacy = {
+      ...backup,
+      weeklyNotes: undefined,
+      profile: {
+        timezone: backup.profile.timezone,
+        streakPolicy: backup.profile.streakPolicy,
+        notificationTime: backup.profile.notificationTime,
+      },
+    };
+    const parsed = parse(legacy);
+    expect(parsed.profile.remindersEnabled).toBe(false);
+    expect(parsed.profile.quietHoursStart).toBe("22:00");
+    expect(parsed.profile.quietHoursEnd).toBe("07:00");
+    expect(parsed.weeklyNotes).toEqual([]);
   });
 
   it("rejects files from other formats", () => {
-    const backup = buildWorkspaceBackup({
-      profile,
-      habits: [],
-      schedules: [],
-      exceptions: [],
-      logs: [],
-      reminders: [],
-    });
-    expect(() => workspaceBackupSchema.parse({ ...backup, format: "other" })).toThrow();
+    expect(() => parse({ ...backupFixture(), format: "other" })).toThrow();
+  });
+
+  it("rejects malformed private notes and profile settings", () => {
+    const backup = backupFixture();
+    expect(() =>
+      parse({ ...backup, weeklyNotes: [{ weekStart: "not-a-date", note: null, updatedAt: createdAt }] })
+    ).toThrow();
+    expect(() =>
+      parse({ ...backup, profile: { ...backup.profile, quietHoursStart: "25:00" } })
+    ).toThrow();
+  });
+});
+
+describe("validateBackupIntegrity", () => {
+  it("accepts a coherent backup", () => {
+    expect(validateBackupIntegrity(parse(backupFixture()))).toEqual([]);
+  });
+
+  it("catches duplicate ids and records pointing at unknown habits", () => {
+    const base = parse(backupFixture());
+    expect(
+      validateBackupIntegrity({ ...base, habits: [habit, habit] })
+    ).toContain("Backup contains duplicate habit ids.");
+    expect(
+      validateBackupIntegrity({ ...base, logs: [{ ...base.logs[0]!, habitId: "missing" }] })
+    ).toContain("Backup contains a logs record for an unknown habit.");
+  });
+
+  it("catches duplicate check-ins, schedule versions, reminders, and reflections", () => {
+    const base = parse(backupFixture());
+    expect(validateBackupIntegrity({ ...base, logs: [base.logs[0]!, base.logs[0]!] })).toContain(
+      "Backup contains duplicate check-ins for a habit and date."
+    );
+    expect(validateBackupIntegrity({ ...base, schedules: [schedule, schedule] })).toContain(
+      "Backup contains duplicate schedule versions for a habit."
+    );
+    expect(validateBackupIntegrity({ ...base, reminders: [reminder, reminder] })).toContain(
+      "Backup contains more than one reminder for a habit."
+    );
+    const note = base.weeklyNotes[0]!;
+    expect(validateBackupIntegrity({ ...base, weeklyNotes: [note, note] })).toContain(
+      "Backup contains duplicate weekly reflections."
+    );
   });
 });
