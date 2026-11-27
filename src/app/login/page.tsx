@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/auth/login-form";
 import { sanitizeCallbackUrl } from "@/lib/redirect";
 import { getOptionalSession } from "@/server/dal/auth-guard";
@@ -16,5 +17,9 @@ export default async function LoginPage({
   if (session) redirect("/app");
 
   const { callbackURL } = await searchParams;
-  return <LoginForm callbackURL={sanitizeCallbackUrl(callbackURL)} />;
+  return (
+    <AuthShell mode="signin">
+      <LoginForm callbackURL={sanitizeCallbackUrl(callbackURL)} />
+    </AuthShell>
+  );
 }

@@ -1,26 +1,24 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { authClient } from "@/lib/auth-client";
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Loader2,
+  LockKeyhole,
+  Mail,
+} from "lucide-react";
+import styles from "@/components/auth/auth-shell.module.css";
 import { errorMessage } from "@/lib/api";
+import { authClient } from "@/lib/auth-client";
 
 export function LoginForm({ callbackURL }: { callbackURL: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -44,58 +42,69 @@ export function LoginForm({ callbackURL }: { callbackURL: string }) {
   };
 
   return (
-    <Card className="border-border bg-card shadow-none">
-      <CardHeader>
-        <CardTitle className="text-xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to continue your 365-day streak.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@example.com"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="At least 8 characters"
-            />
-          </div>
+    <form onSubmit={onSubmit} className={styles.form}>
+      <div className={styles.field}>
+        <label htmlFor="email">Email address</label>
+        <div className={styles.inputWrap}>
+          <Mail size={17} aria-hidden="true" />
+          <input
+            id="email"
+            className={styles.input}
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
+          />
+        </div>
+      </div>
 
-          {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
+      <div className={styles.field}>
+        <div className={styles.labelRow}>
+          <label htmlFor="password">Password</label>
+        </div>
+        <div className={styles.inputWrap}>
+          <LockKeyhole size={17} aria-hidden="true" />
+          <input
+            id="password"
+            className={styles.input}
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="At least 8 characters"
+          />
+          <button
+            className={styles.reveal}
+            type="button"
+            onClick={() => setShowPassword((value) => !value)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+          >
+            {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+          </button>
+        </div>
+      </div>
 
-          <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-            {pending ? "Signing in…" : "Sign in"}
-          </Button>
-        </form>
-
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          New here?{" "}
-          <Link href="/register" className="font-semibold text-primary hover:underline">
-            Create an account
-          </Link>
+      {error ? (
+        <p role="alert" className={styles.error}>
+          {error}
         </p>
-      </CardContent>
-    </Card>
+      ) : null}
+
+      <button className={styles.submit} type="submit" disabled={pending}>
+        <span>
+          {pending ? "Signing in…" : "Sign in"}
+        </span>
+        {pending ? (
+          <Loader2 size={17} className="animate-spin" aria-hidden="true" />
+        ) : (
+          <ArrowRight size={17} aria-hidden="true" />
+        )}
+      </button>
+    </form>
   );
 }

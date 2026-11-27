@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { RegisterForm } from "@/components/auth/register-form";
 import { sanitizeCallbackUrl } from "@/lib/redirect";
 import { getOptionalSession } from "@/server/dal/auth-guard";
@@ -16,5 +17,9 @@ export default async function RegisterPage({
   if (session) redirect("/app");
 
   const { callbackURL } = await searchParams;
-  return <RegisterForm callbackURL={sanitizeCallbackUrl(callbackURL, "/onboarding")} />;
+  return (
+    <AuthShell mode="create">
+      <RegisterForm callbackURL={sanitizeCallbackUrl(callbackURL, "/onboarding")} />
+    </AuthShell>
+  );
 }
