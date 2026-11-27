@@ -57,7 +57,7 @@ export function OnboardingScreen({ displayName }: { displayName: string }) {
             <Sparkles className="size-6 text-primary" />
             <CardTitle className="text-lg">Start with 25 habits</CardTitle>
             <CardDescription>
-              A ready-made set based on the original PROJECT_365 list. Uncheck anything
+              A ready-made starter set. Uncheck anything
               that doesn&apos;t fit later.
             </CardDescription>
           </CardHeader>

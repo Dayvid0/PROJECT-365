@@ -20,7 +20,7 @@ export default function PrivacyPage() {
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight">Privacy details</h1>
         <p className="text-sm text-muted-foreground">
-          A plain-language account of what PROJECT_365 stores, syncs, and shares.
+          A plain-language account of what Daymark stores, syncs, and shares.
         </p>
       </div>
 

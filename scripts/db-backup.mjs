@@ -24,7 +24,7 @@ if (!fs.existsSync(dbPath)) {
 const backupsDir = path.join(cwd, ".backups");
 fs.mkdirSync(backupsDir, { recursive: true });
 const ts = new Date().toISOString().replace(/[:.]/g, "-");
-const backupPath = path.join(backupsDir, `project365-db-${ts}.db`);
+const backupPath = path.join(backupsDir, `daymark-db-${ts}.db`);
 fs.copyFileSync(dbPath, backupPath);
 for (const suffix of ["-wal", "-shm"]) {
   const side = `${dbPath}${suffix}`;

@@ -15,12 +15,14 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
+import { DaymarkMark } from "@/components/brand/daymark-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useSignOut } from "@/lib/hooks/use-sign-out";
 import { useBootstrap, useOnlineStatus } from "@/lib/hooks/use-workspace";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
 import { useWorkspaceUIStore } from "@/stores/workspace-ui-store";
+import { APP_NAME } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -81,8 +83,8 @@ export function AppShell({
       </a>
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-56 flex-col border-r border-border bg-card px-3 py-5 md:flex">
         <Link href="/app" className="mb-8 flex items-center gap-2 px-2 text-sm font-bold">
-          <CalendarCheck2 className="size-5 text-primary" />
-          PROJECT_365
+          <DaymarkMark className="size-5 shrink-0" />
+          {APP_NAME}
         </Link>
 
         <nav className="flex flex-1 flex-col gap-1" aria-label="Main navigation">
@@ -119,8 +121,8 @@ export function AppShell({
       <div className="md:pl-56">
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-3 border-b border-border bg-background/90 px-4 backdrop-blur md:px-8">
           <div className="flex items-center gap-2 text-sm font-bold md:hidden">
-            <CalendarCheck2 className="size-5 text-primary" />
-            PROJECT_365
+            <DaymarkMark className="size-5 shrink-0" />
+            {APP_NAME}
           </div>
           <div
             aria-live="polite"

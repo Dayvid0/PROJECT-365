@@ -1,5 +1,8 @@
 # What we reused from folio
 
+This document describes the pre-rename PROJECT_365 baseline. The product is now
+branded Daymark; historical names below are kept where they explain provenance.
+
 This repo is a fresh standalone rewrite of the Expo app `PROJECT-365` on folio's web
 stack. `folio_tracker` was treated as read-only reference. Below is the reusable
 surface we copied and what we changed or deliberately left behind.
@@ -22,7 +25,8 @@ surface we copied and what we changed or deliberately left behind.
 
 - **Palette and brand.** folio's Warm Paper / Carbon Ink and warm accent tokens were
   replaced with the original PROJECT_365 purple (`#7C5CFC`), green/amber/red status
-  colours, and dark `#0F0F17` surface. The icon and manifest are PROJECT_365.
+  colours, and dark `#0F0F17` surface. The icon and manifest were PROJECT_365;
+  Phase 1 replaces them with Daymark's mark and metadata.
 - **Auth.** Email/password only, no email verification, no OAuth, no self-assigned
   roles, no suspension policy, no rate-limit Redis. Registration no longer depends
   on any Firestore write — Better Auth's user row is created first, preferences are
@@ -43,7 +47,7 @@ surface we copied and what we changed or deliberately left behind.
   visible one, avoiding the next-themes SSR/hydration mismatch that can flash or
   regenerate the tree on first paint.
 - **No landing guard / Inngest jobs / email dispatcher.** Those folio subsystems
-  have no counterpart in PROJECT_365. Circles and moderated public discovery are
+  have no counterpart in this app. Circles and moderated public discovery are
   original: invite-only by exact email, and public challenges are standalone,
   anonymous aggregate intentions with no public profiles or direct messages.
 

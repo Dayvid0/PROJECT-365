@@ -1,11 +1,11 @@
-# PROJECT_365 Web
+# Daymark Web
 
-A standalone web/PWA rewrite of the original Expo habit tracker, on folio's stack:
-Next.js 16 App Router, React Query, Drizzle + libSQL, Better Auth, Tailwind v4,
-shadcn/ui, Recharts, Zod, and Vitest.
+A standalone web/PWA habit tracker, now branded Daymark. It grew out of the original
+Expo app and uses Next.js 16 App Router, React Query, Drizzle + libSQL, Better Auth,
+Tailwind v4, shadcn/ui, Recharts, Zod, and Vitest.
 
 This repo does **not** contain Firebase, Expo, or native code. It starts with an
-empty local database and the 25 original starter habits are offered at onboarding.
+empty local database and the 25 starter habits are offered at onboarding.
 
 ## Setup
 
@@ -78,5 +78,6 @@ cache. Web push notifications are intentionally unavailable.
 ## Reuse notes
 
 See [docs/FOLIO-REUSE.md](docs/FOLIO-REUSE.md) for the exact folio patterns copied,
-adapted, or deliberately omitted, and [docs/TEST-SEAMS.md](docs/TEST-SEAMS.md) for
-the public interfaces the tests exercise.
+adapted, or deliberately omitted, [docs/TEST-SEAMS.md](docs/TEST-SEAMS.md) for
+the public interfaces the tests exercise, and
+[docs/DAYMARK-INTEGRATION-PLAN.md](docs/DAYMARK-INTEGRATION-PLAN.md) for the Daymark rollout plan.

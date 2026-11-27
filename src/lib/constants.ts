@@ -1,5 +1,5 @@
-export const APP_NAME = "PROJECT_365";
-export const APP_TAGLINE = "Track every day. Build every habit.";
+export const APP_NAME = "Daymark";
+export const APP_TAGLINE = "Build habits that fit real life.";
 export const DEFAULT_AUTHENTICATED_PATH = "/app";
 export const DEFAULT_ONBOARDING_PATH = "/onboarding";
 

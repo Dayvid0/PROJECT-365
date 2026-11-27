@@ -6,7 +6,7 @@
 :root {
   --radius: 0.5rem;
 
-  /* Light Mode — original PROJECT_365 palette */
+  /* Light Mode — existing palette (Daymark tokens land in Phase 2) */
   --background: #f5f5ff;
   --foreground: #1a1a2e;
 
@@ -38,7 +38,7 @@
 }
 
 .dark {
-  /* Dark Mode — original PROJECT_365 palette */
+  /* Dark Mode — existing palette (Daymark tokens land in Phase 2) */
   --background: #0f0f17;
   --foreground: #f1f0ff;
 

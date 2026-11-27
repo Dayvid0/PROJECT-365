@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       return new Response(JSON.stringify(backup, null, 2), {
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          "Content-Disposition": `attachment; filename="project-365-backup-${stamp}.json"`,
+          "Content-Disposition": `attachment; filename="daymark-backup-${stamp}.json"`,
           "Cache-Control": "private, no-store",
         },
       });
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     return new Response(csv, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": 'attachment; filename="project-365-habits.csv"',
+        "Content-Disposition": 'attachment; filename="daymark-habits.csv"',
         "Cache-Control": "private, no-store",
       },
     });

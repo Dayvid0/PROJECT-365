@@ -5,7 +5,7 @@ import { readJson, routeErrorResponse } from "@/server/http/responses";
 
 export const dynamic = "force-dynamic";
 
-/** Full restore from a PROJECT_365 JSON backup. Replaces the current workspace. */
+/** Full restore from a Daymark JSON backup. Replaces the current workspace. */
 export async function POST(request: Request) {
   try {
     const { user } = await requireSession();

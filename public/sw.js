@@ -1,4 +1,4 @@
-/* PROJECT_365 Service Worker — public-only offline fallback.
+/* Daymark Service Worker — public-only offline fallback.
  * No push handlers: web notifications are intentionally unavailable.
  * Private /api/* and /app/* responses are never cached.
  */
@@ -52,7 +52,7 @@ self.addEventListener("fetch", (event) => {
         const cache = await caches.open(PUBLIC_CACHE_NAME);
         const cachedOffline = await cache.match(OFFLINE_URL);
         if (cachedOffline) return cachedOffline;
-        return new Response("You are offline. Reconnect to use PROJECT_365.", {
+        return new Response("You are offline. Reconnect to use Daymark.", {
           status: 503,
           headers: { "Content-Type": "text/plain; charset=utf-8" },
         });
