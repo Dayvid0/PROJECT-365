@@ -5,10 +5,12 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   CalendarCheck2,
+  ChevronRight,
   CloudOff,
   Compass,
   Grid3X3,
   HeartHandshake,
+  LayoutDashboard,
   ListChecks,
   LogOut,
   Settings,
@@ -24,10 +26,11 @@ import { useWorkspaceUserId } from "@/components/providers/workspace-context";
 import { useWorkspaceUIStore } from "@/stores/workspace-ui-store";
 import { APP_NAME } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import styles from "./app-shell.module.css";
 
 const NAV = [
   { href: "/app/today", label: "Today", icon: CalendarCheck2 },
-  { href: "/app", label: "Dashboard", icon: CalendarCheck2 },
+  { href: "/app", label: "Dashboard", icon: LayoutDashboard },
   { href: "/app/grid", label: "Grid", icon: Grid3X3 },
   { href: "/app/habits", label: "Habits", icon: ListChecks },
   { href: "/app/analytics", label: "Analytics", icon: BarChart3 },
@@ -36,6 +39,12 @@ const NAV = [
   { href: "/app/discover", label: "Discover", icon: Compass },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ] as const;
+
+type NavItem = (typeof NAV)[number] | {
+  href: "/app/moderation";
+  label: "Moderation";
+  icon: typeof ShieldCheck;
+};
 
 export function AppShell({
   displayName,
@@ -57,13 +66,14 @@ export function AppShell({
   const navItems = discoveryEnabled
     ? NAV
     : NAV.filter((item) => item.href !== "/app/discover");
-  const desktopNav = canModerate
+  const desktopNav: readonly NavItem[] = canModerate
     ? [
         ...navItems,
         { href: "/app/moderation", label: "Moderation", icon: ShieldCheck },
       ]
     : navItems;
   const displayNameNow = bootstrap?.user?.name ?? displayName;
+  const initial = (displayNameNow.trim()[0] ?? "D").toUpperCase();
   const checkInLabel = `${pendingCount} check-in${pendingCount === 1 ? "" : "s"}`;
   const syncStatus = !isOnline
     ? pendingCount > 0
@@ -73,115 +83,159 @@ export function AppShell({
       ? `Back online — ${checkInLabel} still waiting to sync. Other changes save only while connected.`
       : "Online — check-ins sync automatically. Other changes save only while connected.";
 
+  function isActive(href: string) {
+    return href === "/app" ? pathname === href : pathname.startsWith(href);
+  }
+
+  const currentLabel =
+    desktopNav.find((item) => isActive(item.href))?.label ?? "Workspace";
+  const sidebarStatus = !isOnline
+    ? pendingCount > 0
+      ? `Offline · ${pendingCount} pending`
+      : "Offline · saved locally"
+    : pendingCount > 0
+      ? `Back online · ${pendingCount} pending`
+      : "Online · synced";
+
   return (
-    <div className="min-h-screen">
+    <div className={styles.shell}>
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
+        className={styles.skipLink}
       >
         Skip to main content
       </a>
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-56 flex-col border-r border-border bg-card px-3 py-5 md:flex">
-        <Link href="/app" className="mb-8 flex items-center gap-2 px-2 text-sm font-bold">
-          <DaymarkMark className="size-5 shrink-0" />
-          {APP_NAME}
+
+      <aside className={styles.sidebar}>
+        <Link href="/app" className={styles.brand}>
+          <span className={styles.brandMark}>
+            <DaymarkMark />
+          </span>
+          <span>{APP_NAME}</span>
         </Link>
 
-        <nav className="flex flex-1 flex-col gap-1" aria-label="Main navigation">
+        <div className={styles.workspace}>
+          <span className={styles.workspaceAvatar} aria-hidden="true">
+            {initial}
+          </span>
+          <span className={styles.workspaceCopy}>
+            <span className="sr-only">Signed in as</span>
+            <strong>{displayNameNow}</strong>
+            <small>Your workspace</small>
+          </span>
+        </div>
+
+        <div className={styles.navLabel}>Your space</div>
+        <nav className={styles.nav} aria-label="Main navigation">
           {desktopNav.map(({ href, label, icon: Icon }) => {
-            const active = href === "/app" ? pathname === href : pathname.startsWith(href);
+            const active = isActive(href);
             return (
               <Link
                 key={href}
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
+                className={cn(styles.navLink, active && styles.navLinkActive)}
               >
                 <Icon className="size-4" />
-                {label}
+                <span>{label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="space-y-2 border-t border-border pt-4">
-          <div className="px-2 text-xs text-muted-foreground">Signed in as</div>
-          <div className="truncate px-2 text-sm font-medium">{displayNameNow}</div>
-          <Button variant="outline" className="w-full justify-start" onClick={signOut}>
+        <div className={styles.sidebarBottom}>
+          <div className={styles.sidebarStatus} aria-hidden="true">
+            <span
+              className={cn(
+                styles.statusDot,
+                (!isOnline || pendingCount > 0) && styles.statusDotAttention
+              )}
+            />
+            {sidebarStatus}
+          </div>
+          <Button variant="outline" className={styles.signOut} onClick={signOut}>
             <LogOut className="size-4" /> Sign out
           </Button>
         </div>
       </aside>
 
-      <div className="md:pl-56">
-        <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-3 border-b border-border bg-background/90 px-4 backdrop-blur md:px-8">
-          <div className="flex items-center gap-2 text-sm font-bold md:hidden">
-            <DaymarkMark className="size-5 shrink-0" />
-            {APP_NAME}
+      <div className={styles.column}>
+        <header className={styles.topbar}>
+          <div className={styles.topbarLead}>
+            <div className={styles.mobileBrand}>
+              <DaymarkMark />
+              {APP_NAME}
+            </div>
+            <div className={styles.breadcrumb}>
+              <span>My practice</span>
+              <ChevronRight className="size-3" aria-hidden="true" />
+              <strong>{currentLabel}</strong>
+            </div>
           </div>
+
           <div
             aria-live="polite"
             aria-atomic="true"
-            className="sr-only text-xs text-muted-foreground md:not-sr-only"
+            className={styles.syncText}
           >
             {syncStatus}
             {pendingCount > 0 ? (
-              <Link href="/app/settings" className="ml-1 underline underline-offset-2">
+              <Link href="/app/settings" className={styles.syncLink}>
                 Review pending changes
               </Link>
             ) : null}
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className={styles.topbarActions}>
             {pendingCount > 0 ? (
               <Link
                 href="/app/settings"
                 aria-label={`${checkInLabel} waiting to sync. Review in Settings.`}
-                className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className={cn(styles.statusPill, styles.pendingPill)}
               >
                 <CloudOff className="size-3" />
                 {pendingCount} pending
               </Link>
             ) : !isOnline ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+              <span className={styles.statusPill}>
                 <CloudOff className="size-3" />
                 Offline
               </span>
             ) : null}
-            <ThemeToggle compact />
-            <Button variant="ghost" size="icon" className="md:hidden" aria-label="Sign out" onClick={signOut}>
-              <LogOut className="size-4" />
-            </Button>
+            <span className={styles.topAvatar} aria-hidden="true">
+              {initial}
+            </span>
+            <div className={styles.themeControl}>
+              <ThemeToggle compact />
+            </div>
+            <div className={styles.mobileSignOut}>
+              <Button variant="ghost" size="icon" aria-label="Sign out" onClick={signOut}>
+                <LogOut className="size-4" />
+              </Button>
+            </div>
           </div>
         </header>
 
-        <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-6xl px-4 py-6 pb-28 md:px-8 md:pb-10">
+        <main id="main-content" tabIndex={-1} className={styles.content}>
           {children}
         </main>
       </div>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-card px-2 py-2 md:hidden"
+        className={styles.mobileNav}
         aria-label="Mobile navigation"
       >
         {navItems.map(({ href, label, icon: Icon }) => {
-          const active = href === "/app" ? pathname === href : pathname.startsWith(href);
+          const active = isActive(href);
           return (
             <Link
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex flex-1 flex-col items-center gap-1 rounded-md py-1 text-[10px] font-medium",
-                active ? "text-primary" : "text-muted-foreground"
-              )}
+              className={cn(styles.mobileNavLink, active && styles.mobileNavLinkActive)}
             >
               <Icon className="size-5" />
-              {label}
+              <span>{label}</span>
             </Link>
           );
         })}
