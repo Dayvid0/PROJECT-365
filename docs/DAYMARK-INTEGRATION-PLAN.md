@@ -312,4 +312,10 @@ changes.
 Phase 2 is complete: paper-light is the default theme (system preference is still
 respected), dark mode uses the same ink/lime system, globals carry Daymark color/type/
 radius tokens, DM Sans and Newsreader are self-hosted via `next/font`, and shared
-primitives use the remapped tokens. Next work item: **Phase 3 — landing page**.
+primitives use the remapped tokens.
+
+Phase 3 is complete: the landing page uses Daymark's structure and visual language,
+licensed Unsplash imagery with footer attribution, real `/register` and `/login` CTAs,
+and accurate private-by-default/moderation-gated copy. The interactive check-in preview
+is clearly illustrative and does not persist data. Next work item: **Phase 4 — app shell
+and navigation**.
