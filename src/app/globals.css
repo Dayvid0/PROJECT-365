@@ -4,75 +4,84 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.375rem;
 
-  /* Light Mode — existing palette (Daymark tokens land in Phase 2) */
-  --background: #f5f5ff;
-  --foreground: #1a1a2e;
+  /* Fixed Daymark brand colors, available as utilities in both themes. */
+  --ink: #181c17;
+  --paper: #fffef9;
+  --cream: #f5f4ed;
+  --lime: #d8f269;
+  --coral: #d58a65;
+  --sage: #62784c;
 
-  --card: #ffffff;
-  --card-foreground: #1a1a2e;
-  --popover: #ffffff;
-  --popover-foreground: #1a1a2e;
+  /* Light theme — paper surfaces, ink text, lime actions. */
+  --background: #f5f4ed;
+  --foreground: #181c17;
 
-  --primary: #6d4ce0;
-  --primary-foreground: #ffffff;
-  --primary-hover: #5d3acb;
-  --secondary: #eeeeff;
-  --secondary-foreground: #1a1a2e;
-  --muted: #eeeeff;
-  --muted-foreground: #6a6a8a;
-  --accent: #e9e3ff;
-  --accent-foreground: #1a1a2e;
-  --destructive: #b91c1c;
-  --destructive-foreground: #ffffff;
-  --border: #e0e0f0;
-  --input: #e0e0f0;
-  --ring: #6d4ce0;
+  --card: #fffef9;
+  --card-foreground: #181c17;
+  --popover: #fffef9;
+  --popover-foreground: #181c17;
 
-  /* Text-safe on white cards and on the light background (WCAG AA). */
-  --color-complete: #15803d;
-  --color-partial: #b45309;
-  --color-missed: #dc2626;
-  --color-nolog: #4b5563;
+  --primary: #d8f269;
+  --primary-foreground: #181c17;
+  --primary-hover: #e4f88c;
+  --secondary: #edf0e6;
+  --secondary-foreground: #181c17;
+  --muted: #e9ece2;
+  --muted-foreground: #5f685b;
+  --accent: #eef1e5;
+  --accent-foreground: #181c17;
+  --destructive: #b23a2b;
+  --destructive-foreground: #fffef9;
+  --border: #dfe3d6;
+  --input: #dfe3d6;
+  --ring: #62784c;
+
+  /* Text-safe on paper, cream, and muted surfaces (WCAG AA). */
+  --color-complete: #3f6b3a;
+  --color-partial: #9a5b20;
+  --color-missed: #b23a2b;
+  --color-nolog: #5b6356;
 }
 
 .dark {
-  /* Dark Mode — existing palette (Daymark tokens land in Phase 2) */
-  --background: #0f0f17;
-  --foreground: #f1f0ff;
+  /* Dark theme — the same ink/lime system, deliberately remapped. */
+  --background: #181c17;
+  --foreground: #f5f4ed;
 
-  --card: #1a1a2e;
-  --card-foreground: #f1f0ff;
-  --popover: #1a1a2e;
-  --popover-foreground: #f1f0ff;
+  --card: #20251f;
+  --card-foreground: #f5f4ed;
+  --popover: #20251f;
+  --popover-foreground: #f5f4ed;
 
-  /* A light accent with dark text keeps both labels and solid buttons readable. */
-  --primary: #a68bff;
-  --primary-foreground: #1a1a2e;
-  --primary-hover: #b9a3ff;
-  --secondary: #232338;
-  --secondary-foreground: #f1f0ff;
-  --muted: #232338;
-  --muted-foreground: #a0a0c0;
-  --accent: #2d2d4a;
-  --accent-foreground: #f1f0ff;
-  --destructive: #fca5a5;
-  --destructive-foreground: #1a1a2e;
-  --border: #2d2d4a;
-  --input: #2d2d4a;
-  --ring: #c4b5fd;
+  --primary: #d8f269;
+  --primary-foreground: #181c17;
+  --primary-hover: #e4f88c;
+  --secondary: #2a3127;
+  --secondary-foreground: #f5f4ed;
+  --muted: #262d24;
+  --muted-foreground: #aab3a3;
+  --accent: #313a2d;
+  --accent-foreground: #f5f4ed;
+  --destructive: #f3a292;
+  --destructive-foreground: #181c17;
+  --border: #363e33;
+  --input: #363e33;
+  --ring: #d8f269;
 
   /* Brighter status text for dark cards (WCAG AA). */
-  --color-complete: #4ade80;
-  --color-partial: #fbbf24;
-  --color-missed: #f87171;
-  --color-nolog: #9ca3af;
+  --color-complete: #a9d26c;
+  --color-partial: #f0c274;
+  --color-missed: #f3a292;
+  --color-nolog: #b8bfb1;
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), Georgia, serif;
+  --font-display: var(--font-newsreader), Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -93,6 +102,12 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-cream: var(--cream);
+  --color-lime: var(--lime);
+  --color-coral: var(--coral);
+  --color-sage: var(--sage);
 
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
@@ -106,7 +121,18 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background font-sans text-foreground;
+  }
+
+  h1,
+  h2 {
+    font-family: var(--font-newsreader), Georgia, serif;
+    letter-spacing: -0.03em;
+  }
+
+  ::selection {
+    background: var(--lime);
+    color: var(--ink);
   }
 }
 

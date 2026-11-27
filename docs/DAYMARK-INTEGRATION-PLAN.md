@@ -307,4 +307,9 @@ These are **not** part of the visual reskin. Each needs its own spec, data model
 
 Phase 0 decisions are approved and Phase 1 is complete: the app is branded Daymark in
 copy, metadata, manifest, icon, and export filenames, with no feature or backup-schema
-changes. Next work item: **Phase 2 — design tokens and base components**.
+changes.
+
+Phase 2 is complete: paper-light is the default theme (system preference is still
+respected), dark mode uses the same ink/lime system, globals carry Daymark color/type/
+radius tokens, DM Sans and Newsreader are self-hosted via `next/font`, and shared
+primitives use the remapped tokens. Next work item: **Phase 3 — landing page**.
