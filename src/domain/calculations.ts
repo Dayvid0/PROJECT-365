@@ -304,12 +304,17 @@ export function buildMonthlySnapshot(
     week4: weeklyAverage(weeks.week4!),
   };
 
-  const completionRate = monthlyCompletionRate(Object.values(habitScores));
+  // Habits with no schedule in this month are not tracked here; averaging them
+  // in as 0% would penalise months for habits that did not exist yet.
+  const scoredHabits = activeHabits.filter(
+    (habit) => (scheduledOpportunities[habit.id] ?? 0) > 0
+  );
+  const completionRate = monthlyCompletionRate(scoredHabits.map((habit) => habitScores[habit.id] ?? 0));
   let bestHabit: MonthlySnapshot["bestHabit"] = null;
   let worstHabit: MonthlySnapshot["worstHabit"] = null;
 
-  if (activeHabits.length > 0) {
-    const ranked = [...activeHabits].sort(
+  if (scoredHabits.length > 0) {
+    const ranked = [...scoredHabits].sort(
       (a, b) => (habitScores[b.id] ?? 0) - (habitScores[a.id] ?? 0)
     );
     const best = ranked[0]!;

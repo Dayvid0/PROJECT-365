@@ -205,6 +205,21 @@ describe("monthly snapshot", () => {
     expect(snapshot.habitScores.a).toBe(1);
   });
 
+  it("excludes habits with no schedule this month from the overall rate", () => {
+    const snapshot = buildMonthlySnapshot(
+      "2026-01",
+      [habit("a", { name: "Tracked" }), habit("b", { name: "Not yet tracked" })],
+      [log("2026-01-01", "a", 1)],
+      new Date(),
+      { schedules: [schedule("a", { effectiveTo: "2026-01-01" })] }
+    );
+
+    expect(snapshot.scheduledOpportunities).toEqual({ a: 1, b: 0 });
+    expect(snapshot.completionRate).toBe(1);
+    expect(snapshot.bestHabit?.name).toBe("Tracked");
+    expect(snapshot.worstHabit?.name).toBe("Tracked");
+  });
+
   it("ignores archived habits", () => {
     const snapshot = buildMonthlySnapshot(
       "2026-01",

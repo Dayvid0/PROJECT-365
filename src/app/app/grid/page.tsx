@@ -36,6 +36,14 @@ export default function GridPage() {
   const upsertLogs = useUpsertLogs(userId);
 
   const activeHabits = habits.filter((habit) => habit.isActive);
+  const monthHabits = activeHabits.filter((habit) =>
+    schedules.some(
+      (schedule) =>
+        schedule.habitId === habit.id &&
+        schedule.effectiveFrom <= `${month}-31` &&
+        (!schedule.effectiveTo || schedule.effectiveTo >= `${month}-01`)
+    ) || logs.some((log) => log.habitId === habit.id && log.date.startsWith(`${month}-`))
+  );
 
   const handleCellTap = (habitId: string, date: string, status: HabitStatus) => {
     upsertLogs.mutate({
@@ -87,11 +95,19 @@ export default function GridPage() {
             </Button>
           </CardContent>
         </Card>
+      ) : monthHabits.length === 0 ? (
+        <Card className="border-border bg-card">
+          <CardHeader className="items-center text-center">
+            <Grid3X3 className="size-10 text-muted-foreground" />
+            <CardTitle>No habits tracked in this month</CardTitle>
+            <CardDescription>Switch months to review your imported history.</CardDescription>
+          </CardHeader>
+        </Card>
       ) : (
         <>
           <HabitGridTable
             month={month}
-            habits={activeHabits}
+            habits={monthHabits}
             logs={logs}
             schedules={schedules}
             exceptions={exceptions}
