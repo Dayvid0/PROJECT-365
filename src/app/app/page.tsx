@@ -12,10 +12,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { monthLabel, MonthNav } from "@/components/habits/month-nav";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
+import styles from "@/components/tracking/tracking.module.css";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,6 +28,7 @@ import {
 import { formatPercent, toMonthString } from "@/domain/calculations";
 import { apiFetch, errorMessage } from "@/lib/api";
 import { useHabits, useSnapshot } from "@/lib/hooks/use-workspace";
+import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
   const userId = useWorkspaceUserId();
@@ -65,13 +67,14 @@ export default function DashboardPage() {
   const circumference = 2 * Math.PI * 66;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className={cn("space-y-6", styles.page)}>
+      <div className={cn("flex flex-wrap items-center justify-between gap-3", styles.pageHead)}>
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">{monthLabel(month)} at a glance</p>
+          <span className={styles.eyebrow}>YOUR PRACTICE · OVERVIEW</span>
+          <h1 className={styles.title}>Dashboard</h1>
+          <p className={styles.subtitle}>{monthLabel(month)} at a glance</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={cn("flex items-center gap-2", styles.actions)}>
           <MonthNav month={month} onChange={setMonth} />
           <Button
             variant="outline"
@@ -129,9 +132,9 @@ export default function DashboardPage() {
           </Card>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Card className="border-[color-mix(in_srgb,#22C55E_50%,var(--border))] bg-card">
+            <Card className={cn("border-[color-mix(in_srgb,#22C55E_50%,var(--border))] bg-card", styles.stat)}>
               <CardHeader className="pb-2">
-                <CardDescription>🏆 Best habit</CardDescription>
+                <CardDescription className={styles.statLabel}>Best habit</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="truncate text-lg font-bold text-[color:var(--color-complete)]">
@@ -142,9 +145,9 @@ export default function DashboardPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="border-[color-mix(in_srgb,#F59E0B_50%,var(--border))] bg-card">
+            <Card className={cn("border-[color-mix(in_srgb,#F59E0B_50%,var(--border))] bg-card", styles.stat)}>
               <CardHeader className="pb-2">
-                <CardDescription>🌱 Focus habit</CardDescription>
+                <CardDescription className={styles.statLabel}>Focus habit</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="truncate text-lg font-bold text-[color:var(--color-partial)]">
@@ -207,6 +210,15 @@ export default function DashboardPage() {
               <p className="text-[11px] text-muted-foreground">Active habits</p>
             </div>
           </div>
+
+          <p className={styles.privacyNote}>
+            <ShieldCheck className="size-4" aria-hidden="true" />
+            <span>
+              <strong>Private by default.</strong> These numbers come only from your own saved
+              check-ins. Nothing here is public unless you choose to share through an invite-only
+              Circle.
+            </span>
+          </p>
         </>
       )}
     </div>

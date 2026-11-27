@@ -13,8 +13,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, ShieldCheck } from "lucide-react";
 import { WeeklyReviewPanel } from "@/components/analytics/weekly-review-panel";
+import styles from "@/components/tracking/tracking.module.css";
 import {
   Card,
   CardContent,
@@ -86,16 +87,17 @@ export default function AnalyticsPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className={cn("space-y-6", styles.page)}>
+      <div className={cn("flex flex-wrap items-center justify-between gap-3", styles.pageHead)}>
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Analytics</h1>
-          <p className="text-sm text-muted-foreground">Trends across scheduled opportunities, not just logged days.</p>
+          <span className={styles.eyebrow}>MEASURE WHAT MATTERS</span>
+          <h1 className={styles.title}>Analytics</h1>
+          <p className={styles.subtitle}>Trends across scheduled opportunities, not just logged days.</p>
         </div>
         <div
           role="group"
           aria-label="Analytics view"
-          className="flex rounded-md border border-border bg-muted p-1"
+          className={cn("flex rounded-md border border-border bg-muted p-1", styles.chipRow)}
         >
           {MODES.map((mode) => (
             <button
@@ -134,8 +136,8 @@ export default function AnalyticsPage() {
         <>
           <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle>Daily scores</CardTitle>
-              <CardDescription>One point per logged habit day; partial counts as half.</CardDescription>
+              <CardTitle className={styles.panelTitle}>Daily scores</CardTitle>
+              <CardDescription className={styles.panelDescription}>One point per logged habit day; partial counts as half.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-64 w-full">
@@ -154,8 +156,8 @@ export default function AnalyticsPage() {
 
           <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle>Habit performance</CardTitle>
-              <CardDescription>Completion rate for your top eight habits.</CardDescription>
+              <CardTitle className={styles.panelTitle}>Habit performance</CardTitle>
+              <CardDescription className={styles.panelDescription}>Completion rate for your top eight habits.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-64 w-full">
@@ -174,7 +176,8 @@ export default function AnalyticsPage() {
 
           <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle>Overall stats</CardTitle>
+              <CardTitle className={styles.panelTitle}>Overall stats</CardTitle>
+              <CardDescription className={styles.panelDescription}>Every bar comes from your own saved check-ins.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {activeHabits.map((habit) => {
@@ -186,8 +189,8 @@ export default function AnalyticsPage() {
                       <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: habit.color }} />
                       <span className="truncate">{habit.name}</span>
                     </span>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full" style={{ width: `${rate * 100}%`, backgroundColor: color }} />
+                    <div className={styles.barTrack}>
+                      <div className={styles.barFill} style={{ width: `${rate * 100}%`, backgroundColor: color }} />
                     </div>
                     <span className="text-right text-xs font-semibold tabular">{formatPercent(rate)}</span>
                   </div>
@@ -195,6 +198,14 @@ export default function AnalyticsPage() {
               })}
             </CardContent>
           </Card>
+
+          <p className={styles.privacyNote}>
+            <ShieldCheck className="size-4" aria-hidden="true" />
+            <span>
+              <strong>Private by default.</strong> These charts describe only your own history.
+              No participant names, rankings, or progress feeds are shown here.
+            </span>
+          </p>
         </>
       )}
     </div>

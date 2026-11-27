@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import {
   Archive,
   ArchiveRestore,
   ListChecks,
   Pencil,
   Plus,
+  Search,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Dialog,
@@ -27,10 +30,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
+import styles from "@/components/tracking/tracking.module.css";
 import { HABIT_CATEGORIES, PRESET_HABIT_COLORS } from "@/lib/constants";
 import { useCreateHabit, useHabits, useUpdateHabit } from "@/lib/hooks/use-workspace";
 import type { Habit, HabitCategory } from "@/domain/types";
 import { cn } from "@/lib/utils";
+
+type StatusFilter = "all" | "active" | "archived";
 
 interface FormState {
   habitId: string | null;
@@ -52,9 +58,19 @@ export default function HabitsPage() {
   const createHabit = useCreateHabit(userId);
   const updateHabit = useUpdateHabit(userId);
   const [form, setForm] = useState<FormState | null>(null);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<StatusFilter>("all");
+  const [category, setCategory] = useState<HabitCategory | "all">("all");
 
-  const active = habits.filter((habit) => habit.isActive);
-  const archived = habits.filter((habit) => !habit.isActive);
+  const matching = habits.filter((habit) => {
+    const matchesQuery = habit.name.toLowerCase().includes(query.trim().toLowerCase());
+    const matchesStatus =
+      status === "all" || (status === "active" ? habit.isActive : !habit.isActive);
+    const matchesCategory = category === "all" || habit.category === category;
+    return matchesQuery && matchesStatus && matchesCategory;
+  });
+  const active = matching.filter((habit) => habit.isActive);
+  const archived = matching.filter((habit) => !habit.isActive);
   const pending = createHabit.isPending || updateHabit.isPending;
 
   const openEdit = (habit: Habit) =>
@@ -98,16 +114,16 @@ export default function HabitsPage() {
 
   const renderRows = (list: Habit[], isArchived: boolean) =>
     list.map((habit) => (
-      <div
-        key={habit.id}
-        className="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-2.5"
-      >
-        <span className="size-3 rounded-full" style={{ backgroundColor: habit.color }} />
+      <div key={habit.id} className={cn("flex items-center gap-3 rounded-md border border-border bg-card px-3 py-2.5", styles.row)}>
+        <span className={styles.rowDot} style={{ backgroundColor: habit.color }} aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <p className={cn("truncate text-sm font-semibold", isArchived && "text-muted-foreground line-through")}>
+          <Link
+            href={`/app/habits/${habit.id}`}
+            className={cn("block truncate text-sm font-semibold hover:underline", isArchived && "text-muted-foreground line-through")}
+          >
             {habit.name}
-          </p>
-          <p className="text-[11px] capitalize text-muted-foreground">{habit.category}</p>
+          </Link>
+          <p className={cn(styles.rowMeta, "capitalize")}>{habit.category}</p>
         </div>
         <Button variant="ghost" size="icon" aria-label={`Edit ${habit.name}`} onClick={() => openEdit(habit)}>
           <Pencil className="size-4" />
@@ -125,15 +141,63 @@ export default function HabitsPage() {
     ));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
+    <div className={cn("space-y-6", styles.page)}>
+      <div className={cn("flex flex-wrap items-center justify-between gap-3", styles.pageHead)}>
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Habits</h1>
-          <p className="text-sm text-muted-foreground">Archive keeps your history intact.</p>
+          <span className={styles.eyebrow}>SHAPE YOUR ROUTINE</span>
+          <h1 className={styles.title}>Habits</h1>
+          <p className={styles.subtitle}>Archive keeps your history intact.</p>
         </div>
         <Button onClick={() => setForm({ ...EMPTY_FORM })}>
           <Plus className="size-4" /> Add habit
         </Button>
+      </div>
+
+      <div className="space-y-3">
+        <div className={cn("flex items-center gap-2", styles.actions)}>
+          <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <Input
+            type="search"
+            aria-label="Search habits"
+            placeholder="Search habits"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <div className={styles.chipRow} role="group" aria-label="Filter by status">
+          {(["all", "active", "archived"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={status === value}
+              onClick={() => setStatus(value)}
+              className={cn(styles.chip, status === value && styles.chipActive)}
+            >
+              {value === "all" ? "All" : value === "active" ? "Active" : "Archived"}
+            </button>
+          ))}
+        </div>
+        <div className={styles.chipRow} role="group" aria-label="Filter by category">
+          <button
+            type="button"
+            aria-pressed={category === "all"}
+            onClick={() => setCategory("all")}
+            className={cn(styles.chip, category === "all" && styles.chipActive)}
+          >
+            Every category
+          </button>
+          {HABIT_CATEGORIES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={category === value}
+              onClick={() => setCategory(value)}
+              className={cn(styles.chip, category === value && styles.chipActive, "capitalize")}
+            >
+              {value}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isError ? (
@@ -157,19 +221,22 @@ export default function HabitsPage() {
       ) : (
         <div className="space-y-6">
           <section className="space-y-2">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Active ({active.length})
-            </h2>
-            {active.length ? renderRows(active, false) : <p className="text-sm text-muted-foreground">All habits are archived.</p>}
+            <h2 className={styles.sectionLabel}>Active ({active.length})</h2>
+            {active.length ? renderRows(active, false) : <p className={styles.empty}>Nothing matches these filters yet.</p>}
           </section>
           {archived.length > 0 ? (
             <section className="space-y-2">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Archived ({archived.length})
-              </h2>
+              <h2 className={styles.sectionLabel}>Archived ({archived.length})</h2>
               {renderRows(archived, true)}
             </section>
           ) : null}
+          <p className={styles.privacyNote}>
+            <ShieldCheck className="size-4" aria-hidden="true" />
+            <span>
+              <strong>Private by default.</strong> Your habits and their history belong to your
+              account. Sharing only happens through an invite-only Circle you create.
+            </span>
+          </p>
         </div>
       )}
 

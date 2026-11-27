@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Grid3X3 } from "lucide-react";
+import { Grid3X3, ShieldCheck } from "lucide-react";
 import { HabitGridTable } from "@/components/habits/habit-grid-table";
 import { MonthNav } from "@/components/habits/month-nav";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
+import styles from "@/components/tracking/tracking.module.css";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,12 +18,13 @@ import {
 import { toMonthString } from "@/domain/calculations";
 import type { HabitStatus } from "@/domain/types";
 import { useHabits, useLogs, useUpsertLogs } from "@/lib/hooks/use-workspace";
+import { cn } from "@/lib/utils";
 
 const LEGEND = [
-  { icon: "✔", label: "Done", color: "#22C55E" },
-  { icon: "⚠", label: "Partial", color: "#F59E0B" },
-  { icon: "✗", label: "Missed", color: "#EF4444" },
-  { icon: "–", label: "No log", color: "#6B7280" },
+  { icon: "✔", label: "Done", tone: styles.swatchDone },
+  { icon: "⚠", label: "Partial", tone: styles.swatchPartial },
+  { icon: "✗", label: "Missed", tone: styles.swatchMissed },
+  { icon: "–", label: "No log", tone: styles.swatchNone },
 ] as const;
 
 export default function GridPage() {
@@ -42,15 +44,19 @@ export default function GridPage() {
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className={cn("space-y-5", styles.page)}>
+      <div className={cn("flex flex-wrap items-center justify-between gap-3", styles.pageHead)}>
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Habit grid</h1>
-          <p className="text-sm text-muted-foreground">
-            Tap a cell to cycle: done → partial → missed → done.
+          <span className={styles.eyebrow}>MONTH BY MONTH · YOUR GRID</span>
+          <h1 className={styles.title}>Habit grid</h1>
+          <p className={styles.subtitle}>
+            Every square is a real day; filled squares come from saved check-ins. Tap a cell to
+            cycle: done → partial → missed → done.
           </p>
         </div>
-        <MonthNav month={month} onChange={setMonth} />
+        <div className={styles.actions}>
+          <MonthNav month={month} onChange={setMonth} />
+        </div>
       </div>
 
       {isError || logsError ? (
@@ -89,16 +95,23 @@ export default function GridPage() {
             exceptions={exceptions}
             onCellTap={handleCellTap}
           />
-          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
+          <div className={styles.legend} aria-label="Grid legend">
             {LEGEND.map((item) => (
-              <span key={item.label} className="inline-flex items-center gap-1.5">
-                <span className="text-base font-bold" style={{ color: item.color }}>{item.icon}</span>
+              <span key={item.label} className={styles.legendItem}>
+                <span className={cn(styles.swatch, item.tone)} aria-hidden="true">{item.icon}</span>
                 {item.label}
               </span>
             ))}
           </div>
           <p className="text-center text-[11px] text-muted-foreground">
             Changes are saved immediately. If you&apos;re offline, they queue and sync on reconnect.
+          </p>
+          <p className={styles.privacyNote}>
+            <ShieldCheck className="size-4" aria-hidden="true" />
+            <span>
+              <strong>Private by default.</strong> Your grid is derived from your own check-ins
+              and is never shown to other people unless you invite them to a Circle.
+            </span>
           </p>
         </>
       )}

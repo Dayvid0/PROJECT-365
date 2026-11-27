@@ -17,14 +17,8 @@ import type {
   HabitStatus,
   ScheduleException,
 } from "@/domain/types";
+import styles from "@/components/tracking/tracking.module.css";
 import { cn } from "@/lib/utils";
-
-const STATUS_COLOR: Record<HabitStatus | "none", string> = {
-  1: "#22C55E",
-  0.5: "#F59E0B",
-  0: "#EF4444",
-  none: "#6B7280",
-};
 
 function statusIcon(status: HabitStatus | undefined): string {
   if (status === 1) return "✔";
@@ -33,10 +27,18 @@ function statusIcon(status: HabitStatus | undefined): string {
   return "–";
 }
 
-function rateColor(rate: number): string {
-  if (rate >= 0.7) return STATUS_COLOR[1];
-  if (rate >= 0.4) return STATUS_COLOR[0.5];
-  return STATUS_COLOR[0];
+function statusTone(status: HabitStatus | undefined): string | undefined {
+  if (status === 1) return styles.gridDone;
+  if (status === 0.5) return styles.gridPartial;
+  if (status === 0) return styles.gridMissed;
+  return styles.gridNone;
+}
+
+function rateTone(rate: number | null): string | undefined {
+  if (rate === null) return styles.gridNone;
+  if (rate >= 0.7) return styles.gridDone;
+  if (rate >= 0.4) return styles.gridPartial;
+  return styles.gridMissed;
 }
 
 /** The original 4-week / 31-day tapping grid, adapted to responsive web. */
@@ -63,10 +65,10 @@ export function HabitGridTable({
   const getLog = (habitId: string, date: string) => byKey.get(`${date}_${habitId}_1`);
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-card">
+    <div className={cn("overflow-x-auto rounded-lg border border-border bg-card", styles.gridFrame)}>
       <div className="min-w-max">
-        <div className="flex border-b border-border">
-          <div className="sticky left-0 z-10 w-40 shrink-0 border-r border-border bg-card px-3 py-2 text-xs font-semibold">
+        <div className={cn("flex border-b border-border", styles.gridHead)}>
+          <div className={cn("sticky left-0 z-10 w-40 shrink-0 border-r border-border bg-card px-3 py-2 text-xs font-semibold", styles.gridLabel)}>
             Habit
           </div>
           {weeks.map((week, index) => (
@@ -102,7 +104,7 @@ export function HabitGridTable({
             <div key={habit.id} className="flex border-b border-border last:border-b-0">
               <Link
                 href={`/app/habits/${habit.id}`}
-                className="sticky left-0 z-10 flex w-40 shrink-0 items-center gap-2 border-r border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted"
+                className={cn("sticky left-0 z-10 flex w-40 shrink-0 items-center gap-2 border-r border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted", styles.gridLabel)}
                 title={`Open ${habit.name} details`}
               >
                 <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: habit.color }} />
@@ -113,7 +115,6 @@ export function HabitGridTable({
                   {week.map((day) => {
                     const date = format(day, "yyyy-MM-dd");
                     const log = getLog(habit.id, date);
-                    const color = STATUS_COLOR[log?.status ?? "none"];
                     const next = cycleStatus(log?.status);
                     return (
                       <button
@@ -123,13 +124,10 @@ export function HabitGridTable({
                         aria-label={`${habit.name} on ${format(day, "MMM d")}: ${statusIcon(log?.status)}${scheduledSet.has(date) ? "" : " (not scheduled)"} (tap for ${statusIcon(next)})`}
                         title={`${format(day, "MMM d")} · ${statusIcon(log?.status)}${scheduledSet.has(date) ? "" : " · not scheduled"}`}
                         className={cn(
-                          "tap-target m-0.5 flex items-center justify-center rounded border text-[13px] font-bold transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-ring"
+                          "tap-target m-0.5 flex items-center justify-center rounded border text-[13px] font-bold transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-ring",
+                          styles.gridCell,
+                          statusTone(log?.status)
                         )}
-                        style={{
-                          borderColor: color,
-                          backgroundColor: log ? `${color}22` : "transparent",
-                          color,
-                        }}
                       >
                         {statusIcon(log?.status)}
                       </button>
@@ -137,15 +135,15 @@ export function HabitGridTable({
                   })}
                 </div>
               ))}
-              <div className="flex w-14 shrink-0 items-center justify-center text-xs font-bold tabular" style={{ color: rateColor(rate) }}>
+              <div className={cn("flex w-14 shrink-0 items-center justify-center text-xs font-bold tabular", styles.gridCell, rateTone(rate))}>
                 {Math.round(rate * 100)}%
               </div>
             </div>
           );
         })}
 
-        <div className="flex bg-muted/30">
-          <div className="sticky left-0 z-10 w-40 shrink-0 border-r border-border bg-muted px-3 py-2 text-xs font-semibold">
+        <div className={cn("flex bg-muted/30", styles.gridFoot)}>
+          <div className={cn("sticky left-0 z-10 w-40 shrink-0 border-r border-border bg-muted px-3 py-2 text-xs font-semibold", styles.gridLabel)}>
             Daily score
           </div>
           {weeks.map((week, weekIndex) => (
@@ -154,12 +152,14 @@ export function HabitGridTable({
                 const date = format(day, "yyyy-MM-dd");
                 const dayLogs = logs.filter((log) => log.date === date);
                 const score = dayLogs.length ? dailyScore(dayLogs) : null;
-                const color = score === null ? STATUS_COLOR.none : rateColor(score);
                 return (
                   <div
                     key={date}
-                    className="m-0.5 flex size-8 items-center justify-center rounded border border-border text-[10px] font-bold tabular"
-                    style={{ color }}
+                    className={cn(
+                      "m-0.5 flex size-8 items-center justify-center rounded border border-border text-[10px] font-bold tabular",
+                      styles.gridCell,
+                      rateTone(score)
+                    )}
                     title={score === null ? "No logs" : `${Math.round(score * 100)}%`}
                   >
                     {score === null ? "–" : Math.round(score * 100)}

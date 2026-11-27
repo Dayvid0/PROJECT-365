@@ -3,8 +3,9 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { endOfMonth, format } from "date-fns";
-import { ArrowLeft, Bell, EyeOff, Flame } from "lucide-react";
+import { addDays, endOfMonth, format } from "date-fns";
+import { ArrowLeft, Bell, CalendarRange, EyeOff, Flame, ShieldCheck } from "lucide-react";
+import styles from "@/components/tracking/tracking.module.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,17 +28,35 @@ import {
   toMonthString,
 } from "@/domain/calculations";
 import { scheduledDatesForRange } from "@/domain/schedule";
-import type { HabitStatus } from "@/domain/types";
+import type { HabitSchedule, HabitStatus } from "@/domain/types";
 import type { HabitReminderInput } from "@/domain/validation";
 import { WEEKDAY_LABELS } from "@/lib/constants";
 import { useAnalytics, useHabits, useUpsertReminder } from "@/lib/hooks/use-workspace";
+import { cn } from "@/lib/utils";
 
-const STATUS_COLOR: Record<HabitStatus | "none", string> = {
-  1: "#22C55E",
-  0.5: "#F59E0B",
-  0: "#EF4444",
-  none: "#2D2D4A",
+const STATUS_TONE: Record<HabitStatus | "none", string | undefined> = {
+  1: styles.gridDone,
+  0.5: styles.gridPartial,
+  0: styles.gridMissed,
+  none: styles.gridNone,
 };
+
+function cadenceDescription(schedule: HabitSchedule | undefined): string {
+  if (!schedule) return "No cadence version saved yet";
+  const perDay = schedule.timesPerDay > 1 ? ` · ${schedule.timesPerDay}× a day` : "";
+  switch (schedule.cadence) {
+    case "daily":
+      return `Every day${perDay}`;
+    case "weekly":
+      return schedule.weekdays.length
+        ? `${schedule.weekdays.map((day) => WEEKDAY_LABELS[day] ?? day).join(", ")}${perDay}`
+        : `${schedule.timesPerWeek ?? 0}× a week${perDay}`;
+    case "interval":
+      return `Every ${schedule.intervalDays ?? 1} days${perDay}`;
+    case "monthly":
+      return `On day ${schedule.monthDay ?? 1} of each month${perDay}`;
+  }
+}
 
 const EMPTY_REMINDER: HabitReminderInput = {
   enabled: false,
@@ -61,6 +80,20 @@ export default function HabitDetailPage() {
   const schedules = data?.schedules ?? [];
   const exceptions = data?.exceptions ?? [];
   const logMap = new Map(allLogs.map((log) => [log.date, log.status]));
+  const currentSchedule = schedules
+    .filter((item) => item.habitId === habitId)
+    .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0];
+  const todayKey = format(new Date(), "yyyy-MM-dd");
+  const upcomingDates = scheduledDatesForRange(
+    schedules,
+    exceptions,
+    todayKey,
+    format(addDays(new Date(), 13), "yyyy-MM-dd"),
+    habitId
+  );
+  const activeBreaks = exceptions.filter(
+    (item) => item.habitId === habitId && item.startDate <= todayKey && item.endDate >= todayKey
+  ).length;
 
   const savedReminder = reminders.find((reminder) => reminder.habitId === habitId);
   const reminder = reminderDraft ?? savedReminder ?? EMPTY_REMINDER;
@@ -124,53 +157,79 @@ export default function HabitDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={cn("space-y-6", styles.page)}>
       <Button variant="ghost" size="sm" asChild>
         <Link href="/app/habits"><ArrowLeft className="size-4" /> Back to habits</Link>
       </Button>
 
-      <Card className="border-border bg-card" style={{ borderTopColor: habit.color }}>
+      <Card className={cn("border-border bg-card", styles.stat)} style={{ borderTopColor: habit.color }}>
         <CardHeader>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="capitalize">{habit.category}</Badge>
             <span className="size-3 rounded-full" style={{ backgroundColor: habit.color }} />
           </div>
-          <CardTitle className="text-2xl">{habit.name}</CardTitle>
-          <CardDescription>Created {format(new Date(habit.createdAt), "MMM d, yyyy")}</CardDescription>
+          <CardTitle className={styles.title}>{habit.name}</CardTitle>
+          <CardDescription className={styles.subtitle}>Created {format(new Date(habit.createdAt), "MMM d, yyyy")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
           <div>
-            <p className="text-2xl font-extrabold tabular text-primary">{formatPercent(currentRate)}</p>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <p className={cn(styles.statValue, "text-primary")}>{formatPercent(currentRate)}</p>
+            <p className={styles.statDetail}>This month</p>
           </div>
           <div>
-            <p className={`text-2xl font-extrabold tabular ${trend >= 0 ? "text-[color:var(--color-complete)]" : "text-[color:var(--color-partial)]"}`}>
+            <p className={cn(styles.statValue, trend >= 0 ? "text-[color:var(--color-complete)]" : "text-[color:var(--color-partial)]")}>
               {trend >= 0 ? "↑" : "↓"} {Math.abs(trend * 100).toFixed(1)}%
             </p>
-            <p className="text-xs text-muted-foreground">vs last month</p>
+            <p className={styles.statDetail}>vs last month</p>
           </div>
           <div>
             {streak.visible ? (
-              <p className="flex items-center gap-1 text-2xl font-extrabold tabular text-[color:var(--color-partial)]">
+              <p className={cn(styles.statValue, "flex items-center gap-1 text-[color:var(--color-partial)]")}>
                 <Flame className="size-5" /> {streak.current}
                 <span className="text-xs font-normal text-muted-foreground">best {streak.best}</span>
               </p>
             ) : (
-              <p className="flex items-center gap-1 text-2xl font-extrabold text-muted-foreground">
+              <p className={cn(styles.statValue, "flex items-center gap-1 text-muted-foreground")}>
                 <EyeOff className="size-5" /> Hidden
               </p>
             )}
-            <p className="text-xs text-muted-foreground">{streak.label}</p>
+            <p className={styles.statDetail}>{streak.label}</p>
           </div>
         </CardContent>
       </Card>
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className={cn("flex items-center gap-2", styles.panelTitle)}>
+            <CalendarRange className="size-4 text-muted-foreground" /> Cadence
+          </CardTitle>
+          <CardDescription className={styles.panelDescription}>
+            Derived from your saved schedule versions. Skips and planned breaks are excluded.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm font-semibold">{cadenceDescription(currentSchedule)}</p>
+          <div className={styles.statGrid}>
+            <div>
+              <p className={styles.statLabel}>Next 14 days</p>
+              <p className={cn(styles.statValue, "text-primary")}>{upcomingDates.length}</p>
+              <p className={styles.statDetail}>scheduled opportunities</p>
+            </div>
+            <div>
+              <p className={styles.statLabel}>Active breaks</p>
+              <p className={cn(styles.statValue, "text-primary")}>{activeBreaks}</p>
+              <p className={styles.statDetail}>skips or planned breaks</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className={cn("flex items-center gap-2", styles.panelTitle)}>
             <Bell className="size-4 text-muted-foreground" /> Reminder
           </CardTitle>
-          <CardDescription>
+          <CardDescription className={styles.panelDescription}>
             Preferences are saved here. The web app does not send push notifications; nudges appear
             on Today while a tab is open. Snooze and dismiss are available there for this visit only.
           </CardDescription>
@@ -252,8 +311,8 @@ export default function HabitDetailPage() {
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle>12-month heatmap</CardTitle>
-          <CardDescription>Each square is one day. Darker means no log.</CardDescription>
+          <CardTitle className={styles.panelTitle}>12-month heatmap</CardTitle>
+          <CardDescription className={styles.panelDescription}>Each square is one real day of history, derived from your saved logs.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3 overflow-x-auto pb-2">
@@ -269,9 +328,8 @@ export default function HabitDetailPage() {
                     return (
                       <span
                         key={date}
-                        className="size-2 rounded-[2px]"
-                        title={`${date}: ${status === undefined ? "no log" : status}`}
-                        style={{ backgroundColor: STATUS_COLOR[status ?? "none"] }}
+                        className={cn("size-2 rounded-[2px]", STATUS_TONE[status ?? "none"])}
+                        title={`${date}: ${status === undefined ? "no log" : status === 1 ? "done" : status === 0.5 ? "partial" : "missed"}`}
                       />
                     );
                   })}
@@ -284,8 +342,8 @@ export default function HabitDetailPage() {
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle>Monthly breakdown</CardTitle>
-          <CardDescription>Completion rate across the last six months.</CardDescription>
+          <CardTitle className={styles.panelTitle}>Monthly breakdown</CardTitle>
+          <CardDescription className={styles.panelDescription}>Completion rate across the last six months.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {isLoading ? <p className="text-sm text-muted-foreground">Loading history…</p> : null}
@@ -299,8 +357,8 @@ export default function HabitDetailPage() {
                 <span className="text-xs text-muted-foreground">
                   {format(new Date(`${month}-01T00:00:00`), "MMM yyyy")}
                 </span>
-                <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full" style={{ width: `${rate * 100}%`, backgroundColor: habit.color }} />
+                <div className={styles.barTrack}>
+                  <div className={styles.barFill} style={{ width: `${rate * 100}%`, backgroundColor: habit.color }} />
                 </div>
                 <span className="text-right text-xs font-semibold tabular">{formatPercent(rate)}</span>
               </div>
@@ -308,6 +366,15 @@ export default function HabitDetailPage() {
           })}
         </CardContent>
       </Card>
+
+      <p className={styles.privacyNote}>
+        <ShieldCheck className="size-4" aria-hidden="true" />
+        <span>
+          <strong>Private by default.</strong> This history is yours alone unless you choose to
+          share it in an invite-only Circle. Reminder preferences are honest in-app nudges, not
+          push notifications.
+        </span>
+      </p>
     </div>
   );
 }

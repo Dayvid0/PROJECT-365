@@ -1,0 +1,332 @@
+/* Shared Daymark styling for the core tracking screens. Tailwind continues to
+   handle layout and primitives; this module carries the editorial layer. */
+
+.page {
+  width: min(62rem, 100%);
+}
+
+.pageHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.875rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.eyebrow {
+  display: block;
+  color: var(--sage);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0.35rem 0 0.2rem;
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.panelTitle {
+  margin: 0.3rem 0 0;
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.panelDescription {
+  margin: 0.2rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.sectionLabel {
+  margin: 0 0 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+
+.stat {
+  position: relative;
+  overflow: hidden;
+}
+
+.stat::after {
+  position: absolute;
+  top: -2rem;
+  right: -1rem;
+  width: 5rem;
+  height: 5rem;
+  border: 1px solid color-mix(in oklab, var(--lime) 30%, transparent);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+.statLabel {
+  color: var(--muted-foreground);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.statValue {
+  margin: 0.35rem 0 0.1rem;
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.statDetail {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.375rem 0.75rem;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.chip:hover {
+  border-color: var(--sage);
+  background: var(--accent);
+}
+
+.chipActive,
+.chipActive:hover {
+  border-color: var(--sage);
+  background: color-mix(in oklab, var(--lime) 40%, var(--card));
+  color: var(--ink);
+}
+
+.privacyNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--accent);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.privacyNote svg {
+  flex: none;
+  margin-top: 0.1rem;
+  color: var(--sage);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.swatch {
+  display: inline-grid;
+  width: 1rem;
+  height: 1rem;
+  place-items: center;
+  border-radius: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.swatchDone {
+  background: color-mix(in oklab, var(--lime) 60%, var(--card));
+  color: var(--color-complete);
+}
+
+.swatchPartial {
+  background: color-mix(in oklab, var(--color-partial) 22%, var(--card));
+  color: var(--color-partial);
+}
+
+.swatchMissed {
+  background: color-mix(in oklab, var(--color-missed) 20%, var(--card));
+  color: var(--color-missed);
+}
+
+.swatchNone {
+  background: var(--muted);
+  color: var(--color-nolog);
+}
+
+.gridFrame {
+  border-color: var(--border);
+  background: var(--card);
+  box-shadow: 0 10px 30px color-mix(in oklab, var(--ink) 5%, transparent);
+}
+
+.gridHead,
+.gridFoot {
+  border-bottom-color: var(--border);
+  background: var(--card);
+}
+
+.gridFoot {
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+  background: var(--accent);
+}
+
+.gridLabel {
+  border-right-color: var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.gridCell {
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.gridCell:hover {
+  filter: brightness(0.96);
+  transform: scale(1.05);
+}
+
+.gridDone {
+  border-color: color-mix(in oklab, var(--color-complete) 45%, var(--border));
+  background: color-mix(in oklab, var(--lime) 55%, var(--card));
+  color: var(--color-complete);
+}
+
+.gridPartial {
+  border-color: color-mix(in oklab, var(--color-partial) 45%, var(--border));
+  background: color-mix(in oklab, var(--color-partial) 22%, var(--card));
+  color: var(--color-partial);
+}
+
+.gridMissed {
+  border-color: color-mix(in oklab, var(--color-missed) 45%, var(--border));
+  background: color-mix(in oklab, var(--color-missed) 18%, var(--card));
+  color: var(--color-missed);
+}
+
+.gridNone {
+  border-color: var(--border);
+  background: transparent;
+  color: var(--color-nolog);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--card);
+}
+
+.rowDot {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: none;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.rowName {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.rowMeta {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+.barTrack {
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.barFill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sage);
+}
+
+.empty {
+  padding: 2rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .pageHead {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .actions {
+    width: 100%;
+  }
+}
