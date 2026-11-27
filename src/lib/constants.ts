@@ -62,7 +62,15 @@ export const CIRCLE_INVITE_STATUSES = [
 export const CIRCLE_REACTION_KINDS = ["cheer", "support", "respect"] as const;
 
 export const SAFETY_CONTROL_KINDS = ["block", "mute", "leave"] as const;
-export const REPORT_TARGET_TYPES = ["user", "content", "circle"] as const;
+export const REPORT_TARGET_TYPES = ["user", "content", "circle", "public_challenge"] as const;
+
+/** Public challenges are proposals until allowlisted moderators approve them. */
+export const PUBLIC_CHALLENGE_STATUSES = [
+  "proposed",
+  "active",
+  "rejected",
+  "retired",
+] as const;
 export const REPORT_CATEGORIES = [
   "harassment",
   "shame_pressure",

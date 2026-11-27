@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { auth, type BetterAuthSession } from "@/server/auth";
-import { UnauthorizedError } from "./errors";
+import { isConfiguredModerator } from "@/server/moderation-config";
+import { ForbiddenError, UnauthorizedError } from "./errors";
 
 export interface AuthenticatedContext {
   session: BetterAuthSession["session"];
@@ -31,5 +32,16 @@ export async function requireSession(
 ): Promise<AuthenticatedContext> {
   const context = await getOptionalSession(resolver);
   if (!context) throw new UnauthorizedError();
+  return context;
+}
+
+/** Moderation is an environment allowlist, never a self-assigned profile flag. */
+export async function requireModerator(
+  resolver: SessionResolver = defaultSessionResolver
+): Promise<AuthenticatedContext> {
+  const context = await requireSession(resolver);
+  if (!isConfiguredModerator(context.user.email)) {
+    throw new ForbiddenError("Moderator access is not available for this account.");
+  }
   return context;
 }

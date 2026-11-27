@@ -6,7 +6,9 @@ import {
   CIRCLE_REACTION_KINDS,
   HABIT_CATEGORIES,
   HABIT_KINDS,
+  PUBLIC_CHALLENGE_STATUSES,
   REPORT_CATEGORIES,
+  REPORT_STATUSES,
   REPORT_TARGET_TYPES,
   SAFETY_CONTROL_KINDS,
   SCHEDULE_EXCEPTION_KINDS,
@@ -281,6 +283,41 @@ export const safetyReportSchema = z.object({
   detail: z.string().trim().min(1).max(2000),
 });
 
+export const safetyReportReviewSchema = z.object({
+  status: z.enum(REPORT_STATUSES),
+  note: z.string().trim().max(500).nullable().optional(),
+});
+
+/**
+ * A proposal describes only the public intention. It never carries a habit ID,
+ * progress, participant list, or a request to publish someone else's data.
+ */
+export const publicChallengeProposalSchema = z
+  .object({
+    title: z.string().trim().min(1, "Give the challenge a name.").max(80),
+    summary: z.string().trim().min(1, "Describe the shared intention.").max(500),
+    category: z.enum(HABIT_CATEGORIES),
+    startsAt: z.string().datetime({ offset: true }),
+    endsAt: z.string().datetime({ offset: true }),
+    policyAccepted: z
+      .boolean()
+      .refine((value) => value === true, "You must accept the community policy."),
+  })
+  .strict()
+  .refine(
+    (value) => new Date(value.endsAt) > new Date(value.startsAt),
+    "The challenge must end after it starts."
+  )
+  .refine(
+    (value) => new Date(value.endsAt) > new Date(),
+    "Choose an end time in the future."
+  );
+
+export const publicChallengeDecisionSchema = z.object({
+  status: z.enum(PUBLIC_CHALLENGE_STATUSES),
+  note: z.string().trim().max(500).nullable().optional(),
+});
+
 export const circleCreateSchema = z.object({
   name: z.string().trim().min(1, "Give the circle a name.").max(80),
   description: z.string().trim().max(500).nullable().optional(),
@@ -352,3 +389,6 @@ export type CircleChallengeParticipationInput = z.infer<
 >;
 export type SafetyControlInput = z.infer<typeof safetyControlSchema>;
 export type SafetyReportInput = z.infer<typeof safetyReportSchema>;
+export type SafetyReportReviewInput = z.infer<typeof safetyReportReviewSchema>;
+export type PublicChallengeProposalInput = z.infer<typeof publicChallengeProposalSchema>;
+export type PublicChallengeDecisionInput = z.infer<typeof publicChallengeDecisionSchema>;

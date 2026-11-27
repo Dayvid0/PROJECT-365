@@ -20,6 +20,11 @@ corepack pnpm dev
 Open <http://localhost:3000>, register, choose the starter set or an empty grid,
 and start tapping cells.
 
+Public challenge discovery stays closed until both `MODERATOR_EMAILS` (comma-separated
+exact account emails) and `MODERATOR_CONTACT_EMAIL` are set in `.env.local`. Only those
+allowlisted accounts can approve challenges or review reports. Without both values,
+the Discover page explains the gate and no public content can be published.
+
 Local env files and SQLite databases are gitignored. Never commit `.env.local`.
 
 ## Scripts
@@ -38,8 +43,12 @@ Local env files and SQLite databases are gitignored. Never commit `.env.local`.
 - `/` landing, `/login`, `/register`
 - `/onboarding` starter-set choice (first sign-in only)
 - `/app` dashboard, `/app/grid`, `/app/habits`, `/app/habits/[habitId]`,
-  `/app/analytics`, `/app/accountability`, `/app/circles`, `/app/settings`
+  `/app/analytics`, `/app/accountability`, `/app/circles`, `/app/discover` (signed-in,
+  moderation-gated public challenges), `/app/moderation` (allowlisted reviewers only),
+  `/app/settings`
 - `/api/auth/*` Better Auth, `/api/workspace/*` authenticated workspace REST,
+  `/api/workspace/discovery/*` proposals/joins/hides/reports,
+  `/api/workspace/moderation/*` reviewer queues and decisions,
   `/api/health`, `/api/workspace/export` CSV download, `/api/account` permanent deletion
 - `/offline` PWA fallback page
 
@@ -48,6 +57,8 @@ Local env files and SQLite databases are gitignored. Never commit `.env.local`.
 - `src/domain` — pure, framework-free types, calculations, defaults, validation, CSV.
 - `src/server` — Better Auth config, Drizzle schema/DAL, and HTTP error helpers.
   Every route handler calls `requireSession()` and scopes queries by `user.id`.
+  `requireModerator()` and `src/server/moderation-config.ts` enforce the
+  environment allowlist; moderator emails are never sent to the browser.
 - `src/lib/hooks` — React Query hooks with optimistic log writes, visible errors,
   and user-scoped cache keys.
 - `src/stores` — persisted offline queue (no credentials), cleared on sign-out.

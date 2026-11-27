@@ -49,6 +49,9 @@ import {
   habits,
   monthlySnapshots,
   partnerInvites,
+  publicChallengeHides,
+  publicChallengeParticipants,
+  publicChallenges,
   safetyControls,
   safetyReports,
   sessions,
@@ -1026,6 +1029,44 @@ export const workspaceRepository = {
       await tx.delete(monthlySnapshots).where(eq(monthlySnapshots.userId, userId));
       await tx.delete(weeklyReviews).where(eq(weeklyReviews.userId, userId));
       await tx.delete(userPreferences).where(eq(userPreferences.userId, userId));
+
+      await tx.delete(publicChallengeParticipants).where(
+        eq(publicChallengeParticipants.userId, userId)
+      );
+      await tx.delete(publicChallengeHides).where(eq(publicChallengeHides.userId, userId));
+      const myPublicChallenges = await tx
+        .select({ id: publicChallenges.id, status: publicChallenges.status })
+        .from(publicChallenges)
+        .where(eq(publicChallenges.proposerUserId, userId));
+      const removedPublicChallengeIds = myPublicChallenges
+        .filter((row) => row.status === "proposed" || row.status === "rejected")
+        .map((row) => row.id);
+      const retainedPublicChallengeIds = myPublicChallenges
+        .filter((row) => row.status === "active" || row.status === "retired")
+        .map((row) => row.id);
+      if (removedPublicChallengeIds.length) {
+        await tx.delete(safetyReports).where(
+          and(
+            eq(safetyReports.targetType, "public_challenge"),
+            inArray(safetyReports.targetId, removedPublicChallengeIds)
+          )
+        );
+        await tx.delete(publicChallenges).where(inArray(publicChallenges.id, removedPublicChallengeIds));
+      }
+      if (retainedPublicChallengeIds.length) {
+        await tx
+          .update(publicChallenges)
+          .set({ proposerUserId: null, updatedAt: new Date() })
+          .where(inArray(publicChallenges.id, retainedPublicChallengeIds));
+      }
+      await tx
+        .update(safetyReports)
+        .set({ reviewedByUserId: null })
+        .where(eq(safetyReports.reviewedByUserId, userId));
+      await tx
+        .update(publicChallenges)
+        .set({ reviewedByUserId: null })
+        .where(eq(publicChallenges.reviewedByUserId, userId));
 
       await tx.delete(circleInvites).where(
         or(

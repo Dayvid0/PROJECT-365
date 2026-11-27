@@ -19,6 +19,7 @@ import {
   HABIT_CATEGORIES,
   HABIT_KINDS,
   PARTNER_INVITE_STATUSES,
+  PUBLIC_CHALLENGE_STATUSES,
   REPORT_CATEGORIES,
   REPORT_STATUSES,
   REPORT_TARGET_TYPES,
@@ -383,8 +384,8 @@ export const circleComments = sqliteTable(
 );
 
 /**
- * Challenges are circle-local intentions with opt-in participation. There are
- * no public challenges, progress feeds, participant lists, or leaderboards.
+ * Challenges here are circle-local intentions with opt-in participation. They
+ * never become public; a separate, moderation-gated table handles discovery.
  */
 export const circleChallenges = sqliteTable(
   "circle_challenges",
@@ -427,6 +428,72 @@ export const circleChallengeParticipants = sqliteTable(
   ]
 );
 
+/**
+ * Public challenges are standalone intentions, never linked to a habit, grant,
+ * or progress record. They stay hidden until an allowlisted moderator approves.
+ */
+export const publicChallenges = sqliteTable(
+  "public_challenges",
+  {
+    id: text("id").primaryKey().$defaultFn(() => ulid()),
+    proposerUserId: text("proposer_user_id").references(() => users.id, { onDelete: "set null" }),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    category: text("category", { enum: HABIT_CATEGORIES }).notNull(),
+    startsAt: integer("starts_at", { mode: "timestamp_ms" }).notNull(),
+    endsAt: integer("ends_at", { mode: "timestamp_ms" }).notNull(),
+    status: text("status", { enum: PUBLIC_CHALLENGE_STATUSES }).notNull().default("proposed"),
+    policyVersion: text("policy_version").notNull(),
+    reviewNote: text("review_note"),
+    reviewedByUserId: text("reviewed_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    reviewedAt: integer("reviewed_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("public_challenges_status_idx").on(table.status),
+    index("public_challenges_proposer_idx").on(table.proposerUserId),
+    check("public_challenges_title_check", sql`length(${table.title}) between 1 and 80`),
+    check("public_challenges_summary_check", sql`length(${table.summary}) between 1 and 500`),
+    check("public_challenges_window_check", sql`${table.endsAt} > ${table.startsAt}`),
+  ]
+);
+
+export const publicChallengeParticipants = sqliteTable(
+  "public_challenge_participants",
+  {
+    challengeId: text("challenge_id")
+      .notNull()
+      .references(() => publicChallenges.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    primaryKey({ columns: [table.challengeId, table.userId] }),
+    index("public_challenge_participants_user_idx").on(table.userId),
+  ]
+);
+
+/** A personal filter: hiding removes a challenge from one viewer's list only. */
+export const publicChallengeHides = sqliteTable(
+  "public_challenge_hides",
+  {
+    challengeId: text("challenge_id")
+      .notNull()
+      .references(() => publicChallenges.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  },
+  (table) => [
+    primaryKey({ columns: [table.challengeId, table.userId] }),
+    index("public_challenge_hides_user_idx").on(table.userId),
+  ]
+);
+
 /** User-controlled boundaries: block, mute, or leave. No support-only path. */
 export const safetyControls = sqliteTable(
   "safety_controls",
@@ -453,7 +520,7 @@ export const safetyControls = sqliteTable(
   ]
 );
 
-/** Reports stay visible to the reporter; moderation workflow comes later. */
+/** Reporter-owned on the client; allowlisted moderators own the review queue. */
 export const safetyReports = sqliteTable(
   "safety_reports",
   {
@@ -465,6 +532,9 @@ export const safetyReports = sqliteTable(
     category: text("category", { enum: REPORT_CATEGORIES }).notNull(),
     detail: text("detail").notNull(),
     status: text("status", { enum: REPORT_STATUSES }).notNull().default("open"),
+    reviewedByUserId: text("reviewed_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    reviewNote: text("review_note"),
+    reviewedAt: integer("reviewed_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   },

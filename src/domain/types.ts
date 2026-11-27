@@ -392,6 +392,47 @@ export interface CircleChallenge {
   createdAt: string;
 }
 
+export type PublicChallengeStatus =
+  | "proposed"
+  | "active"
+  | "rejected"
+  | "retired";
+
+/**
+ * Signed-in discovery DTO. A proposer, participant identities, private habit
+ * records, progress, and ranking are deliberately absent.
+ */
+export interface PublicChallenge {
+  id: string;
+  title: string;
+  summary: string;
+  category: HabitCategory;
+  startsAt: string;
+  endsAt: string;
+  participantCount: number;
+  viewerJoined: boolean;
+  status: PublicChallengeStatus;
+  createdAt: string;
+}
+
+/** The proposer's own view, including moderation outcome. */
+export interface PublicChallengeProposal extends PublicChallenge {
+  policyVersion: string;
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  canWithdraw: boolean;
+}
+
+/** Moderator-only audit view; proposer identity is never in discovery. */
+export interface ModeratorPublicChallenge extends Omit<PublicChallenge, "viewerJoined"> {
+  proposerId: string | null;
+  proposerEmail: string | null;
+  policyVersion: string;
+  reviewNote: string | null;
+  reviewedByEmail: string | null;
+  reviewedAt: string | null;
+}
+
 export interface SharePreviewField {
   field: ShareField;
   label: string;
@@ -420,7 +461,7 @@ export interface SafetyControl {
   expiresAt: string | null;
 }
 
-export type SafetyReportTargetType = "user" | "content" | "circle";
+export type SafetyReportTargetType = "user" | "content" | "circle" | "public_challenge";
 export type SafetyReportCategory =
   | "harassment"
   | "shame_pressure"
@@ -442,6 +483,16 @@ export interface SafetyReport {
   category: SafetyReportCategory;
   detail: string;
   status: SafetyReportStatus;
+  reviewedByUserId: string | null;
+  reviewNote: string | null;
+  reviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Moderator-only view; reporter identity stays out of discovery and public DTOs. */
+export interface ModeratorSafetyReport extends SafetyReport {
+  reporterEmail: string | null;
+  reviewedByEmail: string | null;
+  targetSummary: string | null;
 }

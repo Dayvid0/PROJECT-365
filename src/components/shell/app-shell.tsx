@@ -6,11 +6,13 @@ import {
   BarChart3,
   CalendarCheck2,
   CloudOff,
+  Compass,
   Grid3X3,
   HeartHandshake,
   ListChecks,
   LogOut,
   Settings,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -29,14 +31,19 @@ const NAV = [
   { href: "/app/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/app/accountability", label: "Accountability", icon: HeartHandshake },
   { href: "/app/circles", label: "Circles", icon: Users },
+  { href: "/app/discover", label: "Discover", icon: Compass },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ] as const;
 
 export function AppShell({
   displayName,
+  discoveryEnabled,
+  canModerate,
   children,
 }: {
   displayName: string;
+  discoveryEnabled: boolean;
+  canModerate: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -45,6 +52,15 @@ export function AppShell({
   const signOut = useSignOut();
   const isOnline = useOnlineStatus();
   const pendingCount = useWorkspaceUIStore((state) => state.pendingLogs.length);
+  const navItems = discoveryEnabled
+    ? NAV
+    : NAV.filter((item) => item.href !== "/app/discover");
+  const desktopNav = canModerate
+    ? [
+        ...navItems,
+        { href: "/app/moderation", label: "Moderation", icon: ShieldCheck },
+      ]
+    : navItems;
   const displayNameNow = bootstrap?.user?.name ?? displayName;
   const checkInLabel = `${pendingCount} check-in${pendingCount === 1 ? "" : "s"}`;
   const syncStatus = !isOnline
@@ -70,7 +86,7 @@ export function AppShell({
         </Link>
 
         <nav className="flex flex-1 flex-col gap-1" aria-label="Main navigation">
-          {NAV.map(({ href, label, icon: Icon }) => {
+          {desktopNav.map(({ href, label, icon: Icon }) => {
             const active = href === "/app" ? pathname === href : pathname.startsWith(href);
             return (
               <Link
@@ -150,7 +166,7 @@ export function AppShell({
         className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-card px-2 py-2 md:hidden"
         aria-label="Mobile navigation"
       >
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, label, icon: Icon }) => {
           const active = href === "/app" ? pathname === href : pathname.startsWith(href);
           return (
             <Link

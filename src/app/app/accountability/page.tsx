@@ -197,8 +197,8 @@ export default function AccountabilityPage() {
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">
-            There is no public profile, user search, or discovery here. A partner is connected only
-            when they accept a link you send them. Every shared field needs your explicit preview
+            This accountability area has no public profile or user search. A partner is connected
+            only when they accept a link you send them. Every shared field needs your explicit preview
             and confirmation, and revoking stops all future sharing. Skips and planned breaks are
             never treated as failures.
           </p>
@@ -606,7 +606,8 @@ export default function AccountabilityPage() {
               Save report
             </Button>
             <p className="text-xs text-muted-foreground">
-              Reports stay visible to you. There is no moderation team or automated enforcement yet.
+              Reports stay visible to you in your history. Allowlisted moderators can review them in
+              the moderation queue; they never see your private habit records.
             </p>
             {reports.data?.reports.length ? (
               <ul className="space-y-1 border-t border-border pt-3">

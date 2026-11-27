@@ -15,6 +15,7 @@ import { db } from "@/server/db";
 import {
   circleMemberships,
   habits,
+  publicChallenges,
   safetyControls,
   safetyReports,
   shareGrants,
@@ -55,6 +56,9 @@ function toReport(row: SafetyReportRow): SafetyReport {
     category: row.category,
     detail: row.detail,
     status: row.status,
+    reviewedByUserId: row.reviewedByUserId,
+    reviewNote: row.reviewNote,
+    reviewedAt: row.reviewedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -317,7 +321,19 @@ export const socialRepository = {
     if (input.targetUserId === userId) {
       throw new ValidationError("You cannot report yourself.");
     }
-    if (input.targetUserId) {
+    if (input.targetType === "public_challenge") {
+      if (input.targetUserId) {
+        throw new ValidationError("Public challenge reports do not name a user.");
+      }
+      const [challenge] = await db
+        .select({ id: publicChallenges.id, status: publicChallenges.status })
+        .from(publicChallenges)
+        .where(eq(publicChallenges.id, input.targetId))
+        .limit(1);
+      if (!challenge || challenge.status !== "active") {
+        throw new NotFoundError("Challenge not found.");
+      }
+    } else if (input.targetUserId) {
       const [target] = await db
         .select({ id: users.id })
         .from(users)

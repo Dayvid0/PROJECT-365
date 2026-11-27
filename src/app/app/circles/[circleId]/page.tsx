@@ -754,7 +754,8 @@ export default function CircleDetailPage() {
             Save report
           </Button>
           <p className="text-xs text-muted-foreground">
-            Reports stay visible to you. There is no moderation team or automated enforcement yet.
+            Reports stay visible to you in your history. Allowlisted moderators can review reports
+            in the moderation queue; they never see your private habit records.
           </p>
 
           <div className="flex flex-wrap gap-2 border-t border-border pt-4">

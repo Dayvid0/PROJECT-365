@@ -253,7 +253,7 @@ export function useCreateSafetyReport(userId: string) {
     onSuccess: () => {
       invalidate();
       toast.success("Report saved", {
-        description: "You can see it in your report history. Moderation is not active yet.",
+        description: "It is in your history and available to allowlisted moderators for review.",
       });
     },
     onError: (error) => toast.error("Could not save report", { description: errorMessage(error) }),

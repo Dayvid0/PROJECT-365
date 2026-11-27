@@ -84,7 +84,8 @@ export default function CirclesPage() {
             Circles are never searchable or public. You invite people by their exact email address,
             they review what joining means before accepting, and every habit field still needs a
             separate preview and your explicit consent. Supportive reactions, replies, and private
-            challenges stay inside the circle. There is no public discovery, direct messaging, or
+            challenges stay inside the circle. Public challenge discovery is a separate,
+            moderation-gated area; circles never feed into it. There is no direct messaging or
             leaderboard.
           </p>
         </CardContent>

@@ -23,13 +23,15 @@ surface we copied and what we changed or deliberately left behind.
 - **Palette and brand.** folio's Warm Paper / Carbon Ink and warm accent tokens were
   replaced with the original PROJECT_365 purple (`#7C5CFC`), green/amber/red status
   colours, and dark `#0F0F17` surface. The icon and manifest are PROJECT_365.
-- **Auth.** Email/password only, no email verification, no OAuth, no admin roles, no
-  suspension policy, no rate-limit Redis. Registration no longer depends on any
-  Firestore write — Better Auth's user row is created first, preferences are lazily
-  ensured, and onboarding happens afterwards.
+- **Auth.** Email/password only, no email verification, no OAuth, no self-assigned
+  roles, no suspension policy, no rate-limit Redis. Registration no longer depends
+  on any Firestore write — Better Auth's user row is created first, preferences are
+  lazily ensured, and onboarding happens afterwards. The only privileged access is
+  a server-side `MODERATOR_EMAILS` allowlist gating the review queue.
 - **Data model.** Instead of folio's tasks/notes/projects/reminders, the schema is
-  habits, habit logs, monthly snapshots, and user preferences. Snapshots are JSON
-  payloads rebuilt from raw logs and invalidated on every write.
+  habits, habit logs, monthly snapshots, and user preferences, plus social tables
+  for invite-only circles and moderation-gated public challenges. Snapshots are
+  JSON payloads rebuilt from raw logs and invalidated on every write.
 - **Offline queue.** folio's server-side reminders/web-push stack is gone. Failed log
   writes are queued in a persisted Zustand store, retried on reconnect, shown with
   toasts, and always discarded on sign-out.
@@ -40,8 +42,10 @@ surface we copied and what we changed or deliberately left behind.
 - **Theme toggle.** Both sun and moon icons are always rendered and CSS chooses the
   visible one, avoiding the next-themes SSR/hydration mismatch that can flash or
   regenerate the tree on first paint.
-- **No landing guard / invite routes / social circles / Inngest jobs / email
-  dispatcher.** Those folio subsystems have no counterpart in PROJECT_365.
+- **No landing guard / Inngest jobs / email dispatcher.** Those folio subsystems
+  have no counterpart in PROJECT_365. Circles and moderated public discovery are
+  original: invite-only by exact email, and public challenges are standalone,
+  anonymous aggregate intentions with no public profiles or direct messages.
 
 ## UI and correctness fixes folded in
 

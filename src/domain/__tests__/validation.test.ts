@@ -14,6 +14,9 @@ import {
   deleteAccountSchema,
   monthSchema,
   preferencesPatchSchema,
+  publicChallengeDecisionSchema,
+  publicChallengeProposalSchema,
+  safetyReportReviewSchema,
   scheduleExceptionSchema,
   statusSchema,
   upsertLogsSchema,
@@ -147,5 +150,33 @@ describe("HTTP input validation", () => {
     ).toBe(false);
     expect(circleChallengeParticipationSchema.safeParse({ joined: true }).success).toBe(true);
     expect(circleChallengeParticipationSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("requires explicit policy acceptance for public proposals", () => {
+    const proposal = {
+      title: "Ten quiet minutes",
+      summary: "A kind, non-competitive intention.",
+      category: "routine",
+      startsAt: "2027-01-01T00:00:00.000Z",
+      endsAt: "2027-01-08T00:00:00.000Z",
+      policyAccepted: true,
+    };
+    expect(publicChallengeProposalSchema.safeParse(proposal).success).toBe(true);
+    expect(
+      publicChallengeProposalSchema.safeParse({ ...proposal, policyAccepted: false }).success
+    ).toBe(false);
+    expect(
+      publicChallengeProposalSchema.safeParse({ ...proposal, habitId: "private-habit" }).success
+    ).toBe(false);
+    expect(
+      publicChallengeProposalSchema.safeParse({ ...proposal, endsAt: proposal.startsAt }).success
+    ).toBe(false);
+  });
+
+  it("accepts moderator decisions and report transitions only in known statuses", () => {
+    expect(publicChallengeDecisionSchema.safeParse({ status: "active", note: "Approved" }).success).toBe(true);
+    expect(publicChallengeDecisionSchema.safeParse({ status: "published" }).success).toBe(false);
+    expect(safetyReportReviewSchema.safeParse({ status: "reviewing" }).success).toBe(true);
+    expect(safetyReportReviewSchema.safeParse({ status: "archived" }).success).toBe(false);
   });
 });

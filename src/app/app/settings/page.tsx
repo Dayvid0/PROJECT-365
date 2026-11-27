@@ -383,7 +383,8 @@ export default function SettingsPage() {
           <CardTitle>Circles</CardTitle>
           <CardDescription>
             Invite-only groups with their own members and field-level grants. Joining shares nothing
-            by itself, and there is no search or discovery.
+            by itself, and there is no circle search or discovery. Public challenge discovery is a
+            separate, moderation-gated area.
           </CardDescription>
         </CardHeader>
         <CardContent>

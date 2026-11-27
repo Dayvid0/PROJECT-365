@@ -102,10 +102,12 @@ export default function PrivacyPage() {
             Within a circle, members can send anonymous supportive reactions and written replies on
             updates that are still visible through an active grant. They can also start and join
             private challenges; only the participant count is shown, never names, progress, or a
-            ranking. These interactions are visible only to current members of that circle. There
-            are no public profiles, no user search or discovery, no direct messages, no leaderboards,
-            and no public challenges. Public discovery stays disabled until moderation readiness is
-            in place.
+            ranking. These interactions are visible only to current members of that circle.
+            Separate public challenges can be proposed, but they stay hidden until an allowlisted
+            moderator approves them. Discovery is signed-in only and shows just a title, summary,
+            dates, and an aggregate participant count. There are no public profiles, no user search,
+            no direct messages, and no leaderboards. Joining a public challenge shares no habit
+            data; you can hide, report, or leave it at any time.
           </p>
         </CardContent>
       </Card>
@@ -167,8 +169,10 @@ export default function PrivacyPage() {
             Settings has a permanent Delete account action. After you type your account email to
             confirm, it removes your profile, sessions, preferences, habits, schedules, check-ins,
             notes, reminders, weekly reflections, sharing grants, circles you own, memberships,
-            invites, reactions, comments, challenges, challenge participation, and safety records in
-            one transaction. Your sign-in cookies are cleared as part of that request.
+            invites, reactions, comments, challenges, challenge participation, public challenge
+            proposals you own, public challenge participation, hidden challenges, and safety records
+            in one transaction. Approved public challenges you proposed remain without your account
+            reference. Your sign-in cookies are cleared as part of that request.
           </p>
           <p>
             Export a JSON backup first if you want a copy. Deletion is immediate and cannot be

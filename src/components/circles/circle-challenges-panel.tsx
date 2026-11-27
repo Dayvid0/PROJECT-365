@@ -72,7 +72,7 @@ export function CircleChallengesPanel({
         </CardTitle>
         <CardDescription>
           Intentions shared only with current circle members. Joining records participation, not
-          progress. There is no ranking or public discovery.
+          progress. There is no ranking, and these never become public challenges.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
