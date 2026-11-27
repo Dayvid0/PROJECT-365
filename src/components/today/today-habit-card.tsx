@@ -23,6 +23,8 @@ import type {
 } from "@/domain/types";
 import { useExternalClock } from "@/lib/hooks/use-external-clock";
 import { useLocalTimer } from "@/lib/hooks/use-local-timer";
+import { cn } from "@/lib/utils";
+import styles from "./today-habit-card.module.css";
 
 function formatDuration(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -134,7 +136,7 @@ export function TodayHabitCard({
   const controls = () => {
     if (habit.kind === "count") {
       return (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={styles.controls}>
           <Button
             variant="outline"
             size="icon"
@@ -144,12 +146,10 @@ export function TodayHabitCard({
           >
             <Minus />
           </Button>
-          <output className="min-w-24 text-center text-sm font-bold tabular" aria-live="polite">
+          <output className={styles.countOutput} aria-live="polite">
             {currentValue}
-            {unit ? <span className="ml-1 text-xs font-normal text-muted-foreground">{unit}</span> : null}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">
-              / {targetValue}
-            </span>
+            {unit ? <span className={styles.countUnit}>{unit}</span> : null}
+            <span className={styles.countTarget}>/ {targetValue}</span>
           </output>
           <Button
             variant="outline"
@@ -160,9 +160,9 @@ export function TodayHabitCard({
           >
             <Plus />
           </Button>
-          <div className="flex items-center gap-1">
+          <div className={styles.amountGroup}>
             <Input
-              className="h-11 w-20 text-center"
+              className={styles.amountInput}
               inputMode="decimal"
               aria-label={`Custom amount for ${habit.name}`}
               placeholder="Set"
@@ -188,12 +188,10 @@ export function TodayHabitCard({
 
     if (habit.kind === "timer") {
       return (
-        <div className="flex flex-wrap items-center gap-2">
-          <output className="min-w-24 text-sm font-bold tabular" aria-live="polite">
+        <div className={styles.controls}>
+          <output className={styles.timerOutput} aria-live="polite">
             {formatDuration(elapsedSeconds)}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">
-              / {formatDuration(targetSeconds)}
-            </span>
+            <span className={styles.countTarget}>/ {formatDuration(targetSeconds)}</span>
           </output>
           {timer.startedAt === null ? (
             <Button
@@ -238,7 +236,7 @@ export function TodayHabitCard({
     return (
       <Button
         size="lg"
-        className="min-h-11"
+        className={styles.primaryAction}
         disabled={busy || opportunities.length === 0}
         aria-label={`${allDone ? "Undo" : "Mark done"}: ${habit.name}`}
         onClick={() =>
@@ -264,20 +262,20 @@ export function TodayHabitCard({
   };
 
   return (
-    <li className="rounded-lg border border-border bg-card p-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
+    <li className={cn(styles.item, allDone && styles.itemComplete)}>
+      <div className={styles.itemHead}>
+        <div>
+          <div className={styles.itemIdentity}>
             <span
-              className="size-2.5 shrink-0 rounded-full"
+              className={styles.habitDot}
               style={{ backgroundColor: habit.color }}
               aria-hidden="true"
             />
-            <p className="truncate text-sm font-bold">{habit.name}</p>
+            <p className={styles.habitName}>{habit.name}</p>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{statusLabel}</p>
+          <p className={styles.status}>{statusLabel}</p>
         </div>
-        <Badge variant="outline" className="text-[10px]">
+        <Badge variant="outline" className={styles.kind}>
           {habit.kind === "check_in" ? "Check-in" : habit.kind === "count" ? "Count" : "Timer"}
         </Badge>
       </div>
@@ -285,27 +283,29 @@ export function TodayHabitCard({
       {opportunities.length > 0 ? (
         <div className="mt-3">{controls()}</div>
       ) : (
-        <div className="mt-3 space-y-2">
-          <p className="text-xs text-muted-foreground">
+        <div>
+          <p className={styles.restNote}>
             {exception
               ? "Rest is part of the plan. No catch-up needed."
               : "Nothing due today. Enjoy the breathing room."}
           </p>
           {exception && onUnskip && (
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label={`Put ${habit.name} back on the schedule`}
-              onClick={() => void run(onUnskip)}
-            >
-              <RotateCcw /> Put it back on the schedule
-            </Button>
+            <div className={styles.restActions}>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label={`Put ${habit.name} back on the schedule`}
+                onClick={() => void run(onUnskip)}
+              >
+                <RotateCcw /> Put it back on the schedule
+              </Button>
+            </div>
           )}
         </div>
       )}
 
       {opportunities.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-2">
+        <div className={styles.secondary}>
           <Button
             variant="ghost"
             size="sm"
@@ -344,18 +344,18 @@ export function TodayHabitCard({
 
       {details && (
         <form
-          className="mt-2 space-y-2"
+          className={styles.noteForm}
           onSubmit={(event) => {
             event.preventDefault();
             void run(() => onSave([makeLog({ note: noteDraft.trim() || null })]));
           }}
         >
-          <label className="block text-xs text-muted-foreground" htmlFor={`note-${habit.id}`}>
+          <label className={styles.noteLabel} htmlFor={`note-${habit.id}`}>
             Note for {habit.name}
           </label>
           <Input
             id={`note-${habit.id}`}
-            className="min-h-11"
+            className={styles.noteInput}
             maxLength={2000}
             placeholder="How did it go?"
             value={noteDraft}
