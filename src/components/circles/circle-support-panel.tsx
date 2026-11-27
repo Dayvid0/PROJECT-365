@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Flag, Trash2 } from "lucide-react";
+import styles from "@/components/trust/trust.module.css";
 import type { CircleReactionKind, CircleSharedUpdate } from "@/domain/types";
 import { CIRCLE_REACTION_KINDS } from "@/lib/constants";
 import {
@@ -57,10 +58,10 @@ export function CircleSupportPanel({
   };
 
   return (
-    <div className="mt-3 space-y-3 border-t border-border pt-3">
+    <div className={`${styles.divider} space-y-3`}>
       <div>
-        <p className="text-xs font-medium">Send support</p>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <p className={styles.subsectionTitle}>Send support</p>
+        <div className={`${styles.chipRow} mt-2`}>
           {CIRCLE_REACTION_KINDS.map((kind) => (
             <Button
               key={kind}
@@ -74,12 +75,12 @@ export function CircleSupportPanel({
             </Button>
           ))}
         </div>
-        <p className="mt-1 text-[11px] text-muted-foreground">
+        <p className={styles.privacyNote}>
           Counts are anonymous. Tap again to remove your reaction.
         </p>
       </div>
 
-      <form className="flex flex-wrap items-center gap-2" onSubmit={(event) => void submit(event)}>
+      <form className={styles.rowActions} onSubmit={(event) => void submit(event)}>
         <Input
           aria-label={`Reply to ${update.ownerName}`}
           className="min-w-56 flex-1"
@@ -94,15 +95,12 @@ export function CircleSupportPanel({
       </form>
 
       {update.interactions.comments.length ? (
-        <ul className="space-y-2">
+        <ul className={styles.rowList}>
           {update.interactions.comments.map((comment) => (
-            <li
-              key={comment.id}
-              className="rounded-md border border-border bg-background/40 px-3 py-2 text-xs"
-            >
+            <li key={comment.id} className={`${styles.row} flex-col items-stretch text-xs`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium">{comment.authorName}</span>
-                <span className="flex items-center gap-1">
+                <span className={styles.rowTitle}>{comment.authorName}</span>
+                <span className={styles.rowActions}>
                   {comment.canDelete ? (
                     <Button
                       variant="ghost"
@@ -132,7 +130,7 @@ export function CircleSupportPanel({
                   )}
                 </span>
               </div>
-              <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{comment.body}</p>
+              <p className={`${styles.previewValue} mt-1`}>{comment.body}</p>
             </li>
           ))}
         </ul>

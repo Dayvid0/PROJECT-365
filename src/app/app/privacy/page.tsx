@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import styles from "@/components/trust/trust.module.css";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,20 +17,23 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Privacy details</h1>
-        <p className="text-sm text-muted-foreground">
-          A plain-language account of what Daymark stores, syncs, and shares.
-        </p>
+    <div className={styles.page}>
+      <div className={styles.pageHead}>
+        <div>
+          <span className={styles.eyebrow}>THE HONEST DETAILS</span>
+          <h1 className={styles.title}>Privacy details</h1>
+          <p className={styles.subtitle}>
+            A plain-language account of what Daymark stores, syncs, and shares.
+          </p>
+        </div>
       </div>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle role="heading" aria-level={2}>What is stored</CardTitle>
-          <CardDescription>Your workspace belongs to your signed-in account.</CardDescription>
+          <CardTitle className={styles.panelTitle} role="heading" aria-level={2}>What is stored</CardTitle>
+          <CardDescription className={styles.panelDescription}>Your workspace belongs to your signed-in account.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
+        <CardContent className={`${styles.panelDescription} space-y-2`}>
           <p>
             We store your name, email, timezone, and preferences. We also store the habits you
             create, their schedules and planned breaks, your check-ins and their optional notes,
@@ -46,12 +50,12 @@ export default function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle role="heading" aria-level={2}>Where it lives</CardTitle>
-          <CardDescription>A server database for your account, plus a small local queue.</CardDescription>
+          <CardTitle className={styles.panelTitle} role="heading" aria-level={2}>Where it lives</CardTitle>
+          <CardDescription className={styles.panelDescription}>A server database for your account, plus a small local queue.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
+        <CardContent className={`${styles.panelDescription} space-y-2`}>
           <p>
             Workspace data lives in this app&apos;s server database and is returned only to your
             signed-in account. A session cookie keeps you signed in. The only workspace data kept in
@@ -65,12 +69,12 @@ export default function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle role="heading" aria-level={2}>Sync and offline</CardTitle>
-          <CardDescription>Only check-ins are queued offline.</CardDescription>
+          <CardTitle className={styles.panelTitle} role="heading" aria-level={2}>Sync and offline</CardTitle>
+          <CardDescription className={styles.panelDescription}>Only check-ins are queued offline.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
+        <CardContent className={`${styles.panelDescription} space-y-2`}>
           <p>
             If a check-in cannot reach the server, it waits on this device and retries when the
             connection returns. Other changes — habits, schedules, settings, invites, and sharing —
@@ -84,12 +88,12 @@ export default function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle role="heading" aria-level={2}>Sharing</CardTitle>
-          <CardDescription>Private by default, always.</CardDescription>
+          <CardTitle className={styles.panelTitle} role="heading" aria-level={2}>Sharing</CardTitle>
+          <CardDescription className={styles.panelDescription}>Private by default, always.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
+        <CardContent className={`${styles.panelDescription} space-y-2`}>
           <p>
             Nothing is shared unless you invite someone by their exact email address and they
             accept the invite as that signed-in account. Before you confirm any shared field, you
@@ -112,12 +116,12 @@ export default function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle role="heading" aria-level={2}>Notes and weekly reviews</CardTitle>
-          <CardDescription>Your reflections stay yours.</CardDescription>
+          <CardTitle className={styles.panelTitle} role="heading" aria-level={2}>Notes and weekly reviews</CardTitle>
+          <CardDescription className={styles.panelDescription}>Your reflections stay yours.</CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className={styles.panelDescription}>
           <p>
             Weekly reflections are private and never included in any share grant. Check-in notes
             are included only if you explicitly select the note field in a previewed grant; they
@@ -126,12 +130,12 @@ export default function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle role="heading" aria-level={2}>Reminders</CardTitle>
-          <CardDescription>Honest in-app nudges, not push notifications.</CardDescription>
+          <CardTitle className={styles.panelTitle} role="heading" aria-level={2}>Reminders</CardTitle>
+          <CardDescription className={styles.panelDescription}>Honest in-app nudges, not push notifications.</CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className={styles.panelDescription}>
           <p>
             Reminders appear only while this tab is open. We do not send push notifications and we
             never ask for operating-system notification permission. Quiet hours are respected, and
@@ -140,12 +144,12 @@ export default function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle role="heading" aria-level={2}>Analytics and telemetry</CardTitle>
-          <CardDescription>No third-party tracking is built into this app.</CardDescription>
+          <CardTitle className={styles.panelTitle} role="heading" aria-level={2}>Analytics and telemetry</CardTitle>
+          <CardDescription className={styles.panelDescription}>No third-party tracking is built into this app.</CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className={styles.panelDescription}>
           <p>
             The charts you see are calculated from your own data. This app does not include
             third-party analytics, advertising, or crash-reporting tools, and it does not send
@@ -154,12 +158,12 @@ export default function PrivacyPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle role="heading" aria-level={2}>Export, restore, and account removal</CardTitle>
-          <CardDescription>You can take a full copy of your workspace.</CardDescription>
+          <CardTitle className={styles.panelTitle} role="heading" aria-level={2}>Export, restore, and account removal</CardTitle>
+          <CardDescription className={styles.panelDescription}>You can take a full copy of your workspace.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
+        <CardContent className={`${styles.panelDescription} space-y-3`}>
           <p>
             Settings offers a CSV of habits and logs and a JSON backup containing your profile
             settings, habits, schedules, exceptions, check-ins, reminders, and private weekly notes.

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, LockKeyhole, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import styles from "@/components/trust/trust.module.css";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,9 +39,9 @@ function deltaLabel(delta: number | null): string {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/40 px-3 py-2">
-      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-1 text-xl font-extrabold tabular">{value}</div>
+    <div className={styles.metric}>
+      <div className={styles.metricLabel}>{label}</div>
+      <div className={styles.metricValue}>{value}</div>
     </div>
   );
 }
@@ -70,13 +71,15 @@ export function WeeklyReviewPanel({ userId }: { userId: string }) {
   };
 
   return (
-    <Card className="border-primary/30 bg-card">
+    <Card className={styles.panelAccent}>
       <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="size-4 text-primary" /> Weekly review
+          <CardTitle className={styles.panelTitle}>
+            <span className="flex items-center gap-2">
+              <Sparkles className="size-4 text-primary" /> Weekly review
+            </span>
           </CardTitle>
-          <CardDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <CardDescription className={`${styles.panelDescription} flex flex-wrap items-center gap-x-2 gap-y-1`}>
             <span>
               {shortDate(week)} – {shortDate(weekEndFor(week))}
             </span>
@@ -112,7 +115,7 @@ export function WeeklyReviewPanel({ userId }: { userId: string }) {
 
       <CardContent className="space-y-5">
         {isError ? (
-          <p className="text-sm text-destructive">Could not load this weekly review.</p>
+          <p className={styles.warning}>Could not load this weekly review.</p>
         ) : isLoading || !review ? (
           <div className="h-32 animate-pulse rounded-lg bg-muted" />
         ) : (
@@ -142,9 +145,9 @@ export function WeeklyReviewPanel({ userId }: { userId: string }) {
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold">By habit</h3>
+              <h3 className={styles.subsectionTitle}>By habit</h3>
               {review.habits.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
+                <p className={styles.empty}>
                   No scheduled habits in this week. Nothing to catch up on.
                 </p>
               ) : (
@@ -152,7 +155,7 @@ export function WeeklyReviewPanel({ userId }: { userId: string }) {
                   {review.habits.map((habit) => (
                     <li
                       key={habit.habitId}
-                      className="grid grid-cols-[minmax(0,1fr)_5rem] items-center gap-3 rounded-md border border-border px-3 py-2 sm:grid-cols-[minmax(0,1fr)_7rem_7rem]"
+                      className={`${styles.row} grid grid-cols-[minmax(0,1fr)_5rem] items-center gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_7rem]`}
                     >
                       <span className="flex min-w-0 items-center gap-2 text-sm">
                         <span
@@ -174,15 +177,15 @@ export function WeeklyReviewPanel({ userId }: { userId: string }) {
             </div>
 
             <div className="space-y-2 border-t border-border pt-4">
-              <h3 className="text-sm font-semibold">Context from check-ins</h3>
+              <h3 className={styles.subsectionTitle}>Context from check-ins</h3>
               {review.contextNotes.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No notes attached this week.</p>
+                <p className={styles.rowMeta}>No notes attached this week.</p>
               ) : (
                 <ul className="space-y-2">
                   {review.contextNotes.map((note) => (
                     <li
                       key={`${note.habitId}-${note.date}`}
-                      className="rounded-md border border-border px-3 py-2 text-xs"
+                      className={`${styles.previewRow} text-xs`}
                     >
                       <span className="font-medium">
                         {note.habitName ?? "Archived habit"} · {shortDate(note.date)}
@@ -206,8 +209,9 @@ export function WeeklyReviewPanel({ userId }: { userId: string }) {
                 onChange={(event) => setDraftState({ week, note: event.target.value })}
               />
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-muted-foreground">
-                  Only you can see this. It is never included in a share grant.
+                <p className={styles.privacyNote}>
+                  <LockKeyhole className="size-4" aria-hidden="true" />
+                  <span>Only you can see this. It is never included in a share grant.</span>
                 </p>
                 <Button
                   size="sm"

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
+import styles from "@/components/trust/trust.module.css";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,16 +39,16 @@ export default function InviteReviewPage() {
   };
 
   if (invite.isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading invite…</p>;
+    return <p className={styles.empty}>Loading invite…</p>;
   }
   if (invite.isError || !invite.data) {
     return (
-      <Card className="max-w-xl border-border bg-card">
+      <Card className={`${styles.narrowPage} ${styles.panel}`}>
         <CardHeader>
-          <CardTitle>Invite unavailable</CardTitle>
+          <CardTitle className={styles.panelTitle}>Invite unavailable</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
+          <p className={styles.panelDescription}>
             This link is invalid, expired, or no longer available.
           </p>
           <Button variant="outline" asChild>
@@ -64,20 +65,25 @@ export default function InviteReviewPage() {
     invite.data.invite.inviteeEmail.trim().toLowerCase();
 
   return (
-    <div className="max-w-xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Partner invite</h1>
-        <p className="text-sm text-muted-foreground">
-          Accepting only connects you. Sharing still needs a separate preview and confirmation.
-        </p>
+    <div className={styles.narrowPage}>
+      <div className={styles.pageHead}>
+        <div>
+          <span className={styles.eyebrow}>REVIEW BEFORE YOU CONNECT</span>
+          <h1 className={styles.title}>Partner invite</h1>
+          <p className={styles.subtitle}>
+            Accepting only connects you. Sharing still needs a separate preview and confirmation.
+          </p>
+        </div>
       </div>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldCheck className="size-4 text-primary" /> {invite.data.invite.inviterName}
+          <CardTitle className={styles.panelTitle}>
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="size-4 text-primary" /> {invite.data.invite.inviterName}
+            </span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className={styles.panelDescription}>
             Invited {invite.data.invite.inviteeEmail} · expires{" "}
             {new Date(invite.data.invite.expiresAt).toLocaleDateString()}
           </CardDescription>
@@ -97,13 +103,13 @@ export default function InviteReviewPage() {
           ) : (
             <>
               {!emailMatches ? (
-                <p role="alert" className="rounded-md border border-destructive/40 px-3 py-2 text-xs text-destructive">
+                <p role="alert" className={styles.safetyNote}>
                   This invite was sent to {invite.data.invite.inviteeEmail}, but you are signed in as{" "}
                   {signedInEmail || "an unknown account"}. Sign in with the invited address to accept.
                 </p>
               ) : null}
-              {error ? <p role="alert" className="text-xs text-destructive">{error}</p> : null}
-              <div className="flex flex-wrap gap-2">
+              {error ? <p role="alert" className={styles.warning}>{error}</p> : null}
+              <div className={styles.rowActions}>
                 <Button
                   disabled={!invite.data.canAccept || respond.isPending}
                   onClick={() => void respondToInvite(true)}

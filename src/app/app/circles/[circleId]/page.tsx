@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Check, Copy, ShieldCheck, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
+import styles from "@/components/trust/trust.module.css";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -228,16 +229,16 @@ export default function CircleDetailPage() {
   };
 
   if (detail.isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading circle…</p>;
+    return <p className={styles.empty}>Loading circle…</p>;
   }
   if (detail.isError || !circle) {
     return (
-      <Card className="max-w-xl border-border bg-card">
+      <Card className={`${styles.narrowPage} ${styles.panel}`}>
         <CardHeader>
-          <CardTitle>Circle unavailable</CardTitle>
+          <CardTitle className={styles.panelTitle}>Circle unavailable</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
+          <p className={styles.panelDescription}>
             This circle does not exist or you are not a member.
           </p>
           <Button variant="outline" asChild>
@@ -249,26 +250,29 @@ export default function CircleDetailPage() {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <div>
-        <Link href="/app/circles" className="text-xs font-medium text-primary hover:underline">
-          ← All circles
-        </Link>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight">{circle.name}</h1>
-        <p className="text-sm text-muted-foreground">
-          {circle.role} · {circle.memberCount} member{circle.memberCount === 1 ? "" : "s"} ·
-          invite-only
-        </p>
+    <div className={styles.page}>
+      <div className={styles.pageHead}>
+        <div>
+          <Link href="/app/circles" className="text-xs font-medium text-primary hover:underline">
+            ← All circles
+          </Link>
+          <span className={styles.eyebrow}>INVITE-ONLY ACCOUNTABILITY</span>
+          <h1 className={styles.title}>{circle.name}</h1>
+          <p className={styles.subtitle}>
+            {circle.role} · {circle.memberCount} member{circle.memberCount === 1 ? "" : "s"} ·
+            invite-only
+          </p>
+        </div>
       </div>
 
       {canManage ? (
-        <Card className="border-border bg-card">
+        <Card className={styles.panel}>
           <CardHeader>
-            <CardTitle>Circle details</CardTitle>
-            <CardDescription>Owners and admins can rename the circle.</CardDescription>
+            <CardTitle className={styles.panelTitle}>Circle details</CardTitle>
+            <CardDescription className={styles.panelDescription}>Owners and admins can rename the circle.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className={styles.formGrid}>
               <div className="space-y-2">
                 <Label htmlFor="circle-edit-name">Name</Label>
                 <Input
@@ -306,27 +310,26 @@ export default function CircleDetailPage() {
         </Card>
       ) : null}
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="size-4 text-primary" /> Members
+          <CardTitle className={styles.panelTitle}>
+            <span className="flex items-center gap-2">
+              <Users className="size-4 text-primary" /> Members
+            </span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className={styles.panelDescription}>
             Members see who is here. Display names only — no member directory or search.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-2">
+          <ul className={styles.rowList}>
             {memberList.map((member) => (
-              <li
-                key={member.userId}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
-              >
-                <span>
-                  <span className="font-medium">{member.name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{member.role}</span>
+              <li key={member.userId} className={`${styles.row} text-sm`}>
+                <span className={styles.rowMain}>
+                  <span className={styles.rowTitle}>{member.name}</span>
+                  <span className={styles.rowMeta}>{member.role}</span>
                 </span>
-                <span className="flex flex-wrap items-center gap-2">
+                <span className={styles.rowActions}>
                   {circle.role === "owner" && member.userId !== userId && member.role !== "owner" ? (
                     <Select
                       value={member.role}
@@ -392,10 +395,10 @@ export default function CircleDetailPage() {
       </Card>
 
       {canManage ? (
-        <Card className="border-border bg-card">
+        <Card className={styles.panel}>
           <CardHeader>
-            <CardTitle>Invitations</CardTitle>
-            <CardDescription>
+            <CardTitle className={styles.panelTitle}>Invitations</CardTitle>
+            <CardDescription className={styles.panelDescription}>
               Invite by exact email. Your link is shared out of band; there is no user search.
             </CardDescription>
           </CardHeader>
@@ -429,20 +432,17 @@ export default function CircleDetailPage() {
                 Send invite
               </Button>
             </form>
-            <ul className="space-y-2">
+            <ul className={styles.rowList}>
               {(invites.data?.invites ?? []).map((invite) => (
-                <li
-                  key={invite.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-xs"
-                >
-                  <span>
-                    <span className="font-medium">{invite.inviteeEmail}</span>
-                    <span className="ml-2 text-muted-foreground">
+                <li key={invite.id} className={`${styles.row} text-xs`}>
+                  <span className={styles.rowMain}>
+                    <span className={styles.rowTitle}>{invite.inviteeEmail}</span>
+                    <span className={styles.rowMeta}>
                       {invite.status} · expires{" "}
                       {new Date(invite.expiresAt).toLocaleDateString()}
                     </span>
                   </span>
-                  <span className="flex gap-2">
+                  <span className={styles.rowActions}>
                     <Button variant="ghost" size="sm" onClick={() => void copyLink(invite.token)}>
                       <Copy className="size-3.5" /> Copy link
                     </Button>
@@ -459,22 +459,22 @@ export default function CircleDetailPage() {
                 </li>
               ))}
               {!invites.data?.invites.length ? (
-                <li className="text-xs text-muted-foreground">No invitations yet.</li>
+                <li className={styles.empty}>No invitations yet.</li>
               ) : null}
             </ul>
           </CardContent>
         </Card>
       ) : null}
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Share a habit with this circle</CardTitle>
-          <CardDescription>
+          <CardTitle className={styles.panelTitle}>Share a habit with this circle</CardTitle>
+          <CardDescription className={styles.panelDescription}>
             Preview the exact fields before you agree. Joining the circle alone shares nothing.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={styles.formGrid}>
             <div className="space-y-2">
               <Label htmlFor="circle-grant-habit">Habit</Label>
               <Select value={habitId} onValueChange={setHabitId}>
@@ -501,14 +501,13 @@ export default function CircleDetailPage() {
               />
             </div>
           </div>
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">Fields members can see</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
+          <fieldset className={styles.consentBox}>
+            <legend className={styles.subsectionTitle}>Fields members can see</legend>
+            <div className={styles.consentGrid}>
               {SHARE_FIELDS.map((field) => (
-                <label key={field} className="flex items-center gap-2 text-sm">
+                <label key={field} className={styles.consentItem}>
                   <input
                     type="checkbox"
-                    className="size-4 accent-[var(--primary)]"
                     checked={fields.includes(field)}
                     onChange={() => toggleField(field)}
                   />
@@ -541,24 +540,25 @@ export default function CircleDetailPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>What members chose to share</CardTitle>
-          <CardDescription>
+          <CardTitle className={styles.panelTitle}>What members chose to share</CardTitle>
+          <CardDescription className={styles.panelDescription}>
             Only active, field-level grants from current members appear here. Supportive reactions
             and replies stay inside this circle.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {shared.data?.updates.length ? (
-            <ul className="space-y-3">
+            <ul className={styles.rowList}>
               {shared.data.updates.map((update) => (
-                <li key={update.preview.grantId} className="rounded-md border border-border p-3">
-                  <p className="text-sm font-medium">{update.ownerName}</p>
-                  <ul className="mt-2 space-y-1">
+                <li key={update.preview.grantId} className={`${styles.row} flex-col items-stretch`}>
+                  <p className={styles.rowTitle}>{update.ownerName}</p>
+                  <ul className={`${styles.previewList} mt-2`}>
                     {update.preview.fields.map((field) => (
-                      <li key={field.field} className="text-xs text-muted-foreground">
-                        <span className="font-medium">{field.label}:</span> {field.value}
+                      <li key={field.field} className={styles.previewRow}>
+                        <span className={styles.previewLabel}>{field.label}</span>
+                        <span className={styles.previewValue}>{field.value}</span>
                       </li>
                     ))}
                   </ul>
@@ -572,7 +572,7 @@ export default function CircleDetailPage() {
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-muted-foreground">
+            <p className={styles.empty}>
               Nothing is visible yet. Members share only after their own preview and consent.
             </p>
           )}
@@ -598,25 +598,22 @@ export default function CircleDetailPage() {
         onReport={reportContent}
       />
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Your grants in this circle</CardTitle>
-          <CardDescription>Every grant can be revoked here at any time.</CardDescription>
+          <CardTitle className={styles.panelTitle}>Your grants in this circle</CardTitle>
+          <CardDescription className={styles.panelDescription}>Every grant can be revoked here at any time.</CardDescription>
         </CardHeader>
         <CardContent>
           {grantsList.data?.grants.length ? (
-            <ul className="space-y-2">
+            <ul className={styles.rowList}>
               {grantsList.data.grants.map((grant) => {
                 if (grant.audience !== "circle" || grant.circleId !== circleId) return null;
                 const habitName = habits.find((habit) => habit.id === grant.habitId)?.name ?? "Habit";
                 return (
-                  <li
-                    key={grant.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
-                  >
-                    <span>
-                      <span className="font-medium">{habitName}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">
+                  <li key={grant.id} className={`${styles.row} text-sm`}>
+                    <span className={styles.rowMain}>
+                      <span className={styles.rowTitle}>{habitName}</span>
+                      <span className={styles.rowMeta}>
                         {grant.fields.map((field) => FIELD_LABELS[field]).join(", ")}
                         {grant.revokedAt ? " · revoked" : ""}
                       </span>
@@ -631,22 +628,22 @@ export default function CircleDetailPage() {
               })}
             </ul>
           ) : (
-            <p className="text-xs text-muted-foreground">Nothing is shared right now.</p>
+            <p className={styles.empty}>Nothing is shared right now.</p>
           )}
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/40 bg-card">
+      <Card className={styles.panelSafety}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
+          <CardTitle className={`${styles.panelTitle} flex items-center gap-2 text-destructive`}>
             <ShieldCheck className="size-4" /> Safety and boundaries
           </CardTitle>
-          <CardDescription>
+          <CardDescription className={styles.panelDescription}>
             Always available, even if you never share anything.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={styles.formGrid}>
             <div className="space-y-2">
               <Label htmlFor="report-target-type">Report</Label>
               <Select
@@ -689,7 +686,7 @@ export default function CircleDetailPage() {
             {reportTargetType === "content" ? (
               <div className="space-y-2">
                 <Label>Shared content</Label>
-                <p className="text-xs text-muted-foreground">
+                <p className={styles.rowMeta}>
                   {reportTargetId
                     ? "A comment or challenge is selected. Add what happened below."
                     : "Use Report on a comment or challenge to select it here."}
@@ -753,12 +750,12 @@ export default function CircleDetailPage() {
           >
             Save report
           </Button>
-          <p className="text-xs text-muted-foreground">
+          <p className={styles.note}>
             Reports stay visible to you in your history. Allowlisted moderators can review reports
             in the moderation queue; they never see your private habit records.
           </p>
 
-          <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+          <div className={`${styles.rowActions} border-t border-border pt-4`}>
             {circle.role !== "owner" ? (
               <Button variant="outline" onClick={() => setConfirmLeave(true)}>
                 Leave circle
@@ -774,23 +771,23 @@ export default function CircleDetailPage() {
       </Card>
 
       <Dialog open={Boolean(preview)} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent>
+        <DialogContent className={styles.panel}>
           <DialogHeader>
-            <DialogTitle>Confirm exactly what gets shared</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className={styles.panelTitle}>Confirm exactly what gets shared</DialogTitle>
+            <DialogDescription className={styles.panelDescription}>
               {preview?.audienceLabel ?? "Invite-only circle"} · {preview?.frequencyLabel ?? ""}.
               Nothing else is included.
             </DialogDescription>
           </DialogHeader>
-          <ul className="space-y-2 text-sm">
+          <ul className={`${styles.previewList} text-sm`}>
             {preview?.fields.map((field) => (
-              <li key={field.field} className="rounded-md border border-border px-3 py-2">
-                <span className="block text-xs font-medium text-muted-foreground">{field.label}</span>
-                <span>{field.value}</span>
+              <li key={field.field} className={styles.previewRow}>
+                <span className={styles.previewLabel}>{field.label}</span>
+                <span className={styles.previewValue}>{field.value}</span>
               </li>
             ))}
           </ul>
-          <p className="text-xs text-muted-foreground">{preview?.revocationNotice}</p>
+          <p className={styles.safetyNote}>{preview?.revocationNotice}</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPreview(null)}>
               <X className="size-4" /> Not now
@@ -803,10 +800,10 @@ export default function CircleDetailPage() {
       </Dialog>
 
       <Dialog open={Boolean(revokeId)} onOpenChange={(open) => !open && setRevokeId(null)}>
-        <DialogContent>
+        <DialogContent className={styles.panel}>
           <DialogHeader>
-            <DialogTitle>Revoke this share grant?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className={styles.panelTitle}>Revoke this share grant?</DialogTitle>
+            <DialogDescription className={styles.panelDescription}>
               Future access stops immediately. Anything already seen may remain in a member&apos;s
               history or notes and cannot be pulled back from here.
             </DialogDescription>
@@ -829,10 +826,10 @@ export default function CircleDetailPage() {
       </Dialog>
 
       <Dialog open={confirmLeave} onOpenChange={setConfirmLeave}>
-        <DialogContent>
+        <DialogContent className={styles.panel}>
           <DialogHeader>
-            <DialogTitle>Leave this circle?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className={styles.panelTitle}>Leave this circle?</DialogTitle>
+            <DialogDescription className={styles.panelDescription}>
               Your membership ends, your sharing grants are revoked, and your reactions, comments,
               and challenges in this circle are removed. You will not see future updates here.
             </DialogDescription>
@@ -847,10 +844,10 @@ export default function CircleDetailPage() {
       </Dialog>
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <DialogContent>
+        <DialogContent className={styles.panel}>
           <DialogHeader>
-            <DialogTitle>Delete this circle?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className={styles.panelTitle}>Delete this circle?</DialogTitle>
+            <DialogDescription className={styles.panelDescription}>
               Memberships, invitations, and circle-scoped grants are removed permanently. Your own
               habits and check-ins are untouched.
             </DialogDescription>

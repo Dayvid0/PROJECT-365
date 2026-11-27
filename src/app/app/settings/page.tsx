@@ -6,6 +6,7 @@ import { Download, LogOut, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
+import styles from "@/components/trust/trust.module.css";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -141,22 +142,25 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Profile, progress style, reminders, and your data.
-        </p>
+    <div className={styles.page}>
+      <div className={styles.pageHead}>
+        <div>
+          <span className={styles.eyebrow}>YOUR ACCOUNT, YOUR TERMS</span>
+          <h1 className={styles.title}>Settings</h1>
+          <p className={styles.subtitle}>
+            Profile, progress style, reminders, and your data.
+          </p>
+        </div>
       </div>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Signed in as {user?.email ?? "…"}</CardDescription>
+          <CardTitle className={styles.panelTitle}>Profile</CardTitle>
+          <CardDescription className={styles.panelDescription}>Signed in as {user?.email ?? "…"}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={saveProfile} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className={styles.formGrid}>
               <div className="space-y-2">
                 <Label htmlFor="display-name">Display name</Label>
                 <Input
@@ -181,10 +185,10 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Appearance</CardTitle>
-          <CardDescription>Dark by default; switch any time.</CardDescription>
+          <CardTitle className={styles.panelTitle}>Appearance</CardTitle>
+          <CardDescription className={styles.panelDescription}>Dark by default; switch any time.</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-between">
           <span className="text-sm">Theme</span>
@@ -192,10 +196,10 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Progress style</CardTitle>
-          <CardDescription>
+          <CardTitle className={styles.panelTitle}>Progress style</CardTitle>
+          <CardDescription className={styles.panelDescription}>
             Choose how streaks are shown. History is kept either way.
           </CardDescription>
         </CardHeader>
@@ -221,7 +225,7 @@ export default function SettingsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
+            <p className={styles.rowMeta}>
               Hidden streaks do not remove any check-ins. Skips and planned breaks never break a
               streak.
             </p>
@@ -232,10 +236,10 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Reminders</CardTitle>
-          <CardDescription>
+          <CardTitle className={styles.panelTitle}>Reminders</CardTitle>
+          <CardDescription className={styles.panelDescription}>
             In-app reminders only work while this tab is open. No push notifications are sent and
             no OS permission is needed. Quiet hours are enforced here; snooze and dismiss last for
             the current visit.
@@ -261,7 +265,7 @@ export default function SettingsPage() {
               }
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={styles.formGrid}>
             <div className="space-y-2">
               <Label htmlFor="quiet-start">Quiet hours start</Label>
               <Input
@@ -301,10 +305,10 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Data</CardTitle>
-          <CardDescription>
+          <CardTitle className={styles.panelTitle}>Data</CardTitle>
+          <CardDescription className={styles.panelDescription}>
             Export a CSV of habits or a full JSON backup you can restore later. The JSON backup
             includes schedules, skips, reminders, reminder settings, and private weekly notes.
           </CardDescription>
@@ -344,16 +348,19 @@ export default function SettingsPage() {
                 <Upload className="size-4" /> Restore
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className={styles.rowMeta}>
               A full restore replaces every habit, schedule, log, reminder, preference, and private
               weekly note in this account.
             </p>
           </div>
           {pendingCount > 0 ? (
             <div className="space-y-2 border-t border-border pt-4">
-              <p className="text-xs text-amber-800 dark:text-amber-300">
-                {pendingCount} offline change{pendingCount === 1 ? "" : "s"} still waiting to sync.
-                Exports do not include them yet, and a restore will discard them.
+              <p className={styles.safetyNote}>
+                <Upload className="size-4" aria-hidden="true" />
+                <span>
+                  {pendingCount} offline change{pendingCount === 1 ? "" : "s"} still waiting to
+                  sync. Exports do not include them yet, and a restore will discard them.
+                </span>
               </p>
               <Button variant="outline" size="sm" onClick={() => setConfirmDiscard(true)}>
                 Discard pending changes
@@ -363,10 +370,10 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Accountability</CardTitle>
-          <CardDescription>
+          <CardTitle className={styles.panelTitle}>Accountability</CardTitle>
+          <CardDescription className={styles.panelDescription}>
             Partner invites, field-level sharing, revocation, and safety controls live on their own
             page. Nothing is shared unless you explicitly confirm it.
           </CardDescription>
@@ -378,10 +385,10 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Circles</CardTitle>
-          <CardDescription>
+          <CardTitle className={styles.panelTitle}>Circles</CardTitle>
+          <CardDescription className={styles.panelDescription}>
             Invite-only groups with their own members and field-level grants. Joining shares nothing
             by itself, and there is no circle search or discovery. Public challenge discovery is a
             separate, moderation-gated area.
@@ -394,10 +401,10 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Privacy</CardTitle>
-          <CardDescription>
+          <CardTitle className={styles.panelTitle}>Privacy</CardTitle>
+          <CardDescription className={styles.panelDescription}>
             What is stored, what syncs offline, how sharing works, and what exports include — in
             plain language.
           </CardDescription>
@@ -409,9 +416,9 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>About</CardTitle>
+          <CardTitle className={styles.panelTitle}>About</CardTitle>
         </CardHeader>
         <CardContent className="flex justify-between text-sm text-muted-foreground">
           <span>{APP_NAME}</span>
@@ -419,12 +426,12 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/40 bg-card">
+      <Card className={styles.panelSafety}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
+          <CardTitle className={`${styles.panelTitle} flex items-center gap-2 text-destructive`}>
             <LogOut className="size-4" /> Sign out
           </CardTitle>
-          <CardDescription>
+          <CardDescription className={styles.panelDescription}>
             Pending offline changes are cleared when you sign out, so they can never appear in
             another account.
           </CardDescription>
@@ -441,12 +448,12 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/40 bg-card">
+      <Card className={styles.panelSafety}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
+          <CardTitle className={`${styles.panelTitle} flex items-center gap-2 text-destructive`}>
             <Trash2 className="size-4" /> Delete account
           </CardTitle>
-          <CardDescription>
+          <CardDescription className={styles.panelDescription}>
             Permanently removes your profile, sessions, preferences, habits, schedules, check-ins,
             notes, reminders, weekly reflections, and sharing records. Export a JSON backup first if
             you want a copy. This cannot be undone.
@@ -493,10 +500,10 @@ export default function SettingsPage() {
       </Card>
 
       <Dialog open={confirmRestore} onOpenChange={setConfirmRestore}>
-        <DialogContent>
+        <DialogContent className={styles.panel}>
           <DialogHeader>
-            <DialogTitle>Replace your workspace?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className={styles.panelTitle}>Replace your workspace?</DialogTitle>
+            <DialogDescription className={styles.panelDescription}>
               This deletes your current habits, schedules, logs, reminders, preferences, and private
               weekly notes, then restores the uploaded file. Export a fresh JSON backup first if you
               want a safety copy. This cannot be undone.
@@ -506,7 +513,7 @@ export default function SettingsPage() {
             </DialogDescription>
           </DialogHeader>
           {restoreError ? (
-            <p role="alert" className="text-xs text-destructive">{restoreError}</p>
+            <p role="alert" className={styles.warning}>{restoreError}</p>
           ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmRestore(false)}>Cancel</Button>
@@ -522,10 +529,10 @@ export default function SettingsPage() {
       </Dialog>
 
       <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
-        <DialogContent>
+        <DialogContent className={styles.panel}>
           <DialogHeader>
-            <DialogTitle>Discard pending changes?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className={styles.panelTitle}>Discard pending changes?</DialogTitle>
+            <DialogDescription className={styles.panelDescription}>
               The {pendingCount} check-in{pendingCount === 1 ? "" : "s"} waiting on this device will
               be removed. Saved server data is not affected.
             </DialogDescription>

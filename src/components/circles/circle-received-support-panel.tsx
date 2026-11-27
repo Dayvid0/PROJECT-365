@@ -1,6 +1,7 @@
 "use client";
 
 import { Flag, Heart, Trash2 } from "lucide-react";
+import styles from "@/components/trust/trust.module.css";
 import type { CircleReactionKind, CircleReceivedSupport } from "@/domain/types";
 import { CIRCLE_REACTION_KINDS } from "@/lib/constants";
 import { useDeleteCircleComment } from "@/lib/hooks/use-circles";
@@ -42,35 +43,34 @@ export function CircleReceivedSupportPanel({
   const deleteComment = useDeleteCircleComment(userId, circleId);
 
   return (
-    <Card className="border-border bg-card">
+    <Card className={styles.panel}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Heart className="size-4 text-primary" /> Support you have received
+        <CardTitle className={styles.panelTitle}>
+          <span className="flex items-center gap-2">
+            <Heart className="size-4 text-primary" /> Support you have received
+          </span>
         </CardTitle>
-        <CardDescription>
+        <CardDescription className={styles.panelDescription}>
           Anonymous counts and kind replies from current circle members on updates you chose to
           share. Block and mute boundaries hide support in both directions.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className={styles.rowList}>
         {support.map((item) => (
-          <div key={item.grantId} className="rounded-md border border-border p-3">
-            <p className="text-sm font-medium">{item.label}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
+          <div key={item.grantId} className={`${styles.row} flex-col items-stretch`}>
+            <p className={styles.rowTitle}>{item.label}</p>
+            <p className={`${styles.rowMeta} mt-1`}>
               {CIRCLE_REACTION_KINDS.map(
                 (kind) => `${REACTION_LABELS[kind]} ${item.interactions.reactions.counts[kind]}`
               ).join(" · ")}
             </p>
             {item.interactions.comments.length ? (
-              <ul className="mt-2 space-y-2">
+              <ul className={`${styles.rowList} mt-2`}>
                 {item.interactions.comments.map((comment) => (
-                  <li
-                    key={comment.id}
-                    className="rounded-md border border-border bg-background/40 px-3 py-2 text-xs"
-                  >
+                  <li key={comment.id} className={`${styles.row} flex-col items-stretch text-xs`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-medium">{comment.authorName}</span>
-                      <span className="flex items-center gap-1">
+                      <span className={styles.rowTitle}>{comment.authorName}</span>
+                      <span className={styles.rowActions}>
                         {comment.canDelete ? (
                           <Button
                             variant="ghost"
@@ -105,7 +105,7 @@ export function CircleReceivedSupportPanel({
                         )}
                       </span>
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{comment.body}</p>
+                    <p className={`${styles.previewValue} mt-1`}>{comment.body}</p>
                   </li>
                 ))}
               </ul>

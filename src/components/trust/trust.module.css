@@ -1,0 +1,352 @@
+/* Shared Daymark styling for trust, sharing, and account surfaces. Behaviour,
+   permissions, and server-side invariants remain untouched.
+   Keep these styles in Tailwind's components layer so utility classes on the
+   same elements (grid, alignment, hover states) continue to win the cascade. */
+@layer components {
+
+.page {
+  display: flex;
+  width: min(62rem, 100%);
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.narrowPage {
+  display: flex;
+  width: min(34rem, 100%);
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.pageHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.875rem 1.25rem;
+}
+
+.eyebrow {
+  display: block;
+  color: var(--sage);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0.35rem 0 0.2rem;
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.panel {
+  border-color: var(--border);
+  background: var(--card);
+  box-shadow: 0 10px 30px color-mix(in oklab, var(--ink) 4%, transparent);
+}
+
+.panelAccent {
+  border-color: color-mix(in oklab, var(--sage) 45%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--lime) 20%, var(--card)),
+    var(--card) 60%
+  );
+}
+
+.panelSafety {
+  border-color: color-mix(in oklab, var(--destructive) 35%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--destructive) 8%, var(--card)),
+    var(--card) 60%
+  );
+}
+
+.panelTitle {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.panelDescription {
+  margin: 0.2rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.sectionLabel {
+  margin: 0 0 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.subsectionTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.note,
+.privacyNote,
+.safetyNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--accent);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.privacyNote {
+  border-color: color-mix(in oklab, var(--sage) 35%, var(--border));
+  background: color-mix(in oklab, var(--lime) 12%, var(--accent));
+}
+
+.safetyNote {
+  border-color: color-mix(in oklab, var(--destructive) 30%, var(--border));
+  background: color-mix(in oklab, var(--destructive) 6%, var(--accent));
+}
+
+.note svg,
+.privacyNote svg,
+.safetyNote svg {
+  flex: none;
+  margin-top: 0.1rem;
+  color: var(--sage);
+}
+
+.safetyNote svg {
+  color: var(--destructive);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem;
+}
+
+.consentBox {
+  padding: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--accent);
+}
+
+.consentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.5rem 0.875rem;
+  margin-top: 0.625rem;
+}
+
+.consentItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.consentItem:hover {
+  background: var(--muted);
+}
+
+.consentItem input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--sage);
+}
+
+.previewList,
+.rowList {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.previewRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--sage);
+  border-radius: 0.375rem;
+  background: var(--card);
+}
+
+.previewLabel {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.previewValue {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem 1rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--card);
+}
+
+.rowMain {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.rowTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.rowMeta {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid color-mix(in oklab, var(--sage) 35%, var(--border));
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.75rem;
+}
+
+.metric {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--card);
+}
+
+.metricLabel {
+  color: var(--muted-foreground);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.metricValue {
+  margin: 0.3rem 0 0.1rem;
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.metricDetail {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.chip {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.chipActive,
+.chip:hover {
+  border-color: var(--sage);
+  background: color-mix(in oklab, var(--lime) 35%, var(--card));
+  color: var(--ink);
+}
+
+.empty {
+  padding: 1.25rem 0.75rem;
+  border: 1px dashed var(--border);
+  border-radius: 0.375rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.divider {
+  margin: 1.25rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.warning {
+  color: var(--destructive);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .pageHead {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Flag, Sparkles, Trash2 } from "lucide-react";
+import styles from "@/components/trust/trust.module.css";
 import {
   useCircleChallenges,
   useCreateCircleChallenge,
@@ -65,18 +66,20 @@ export function CircleChallengesPanel({
   };
 
   return (
-    <Card className="border-border bg-card">
+    <Card className={styles.panel}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="size-4 text-primary" /> Private challenges
+        <CardTitle className={styles.panelTitle}>
+          <span className="flex items-center gap-2">
+            <Sparkles className="size-4 text-primary" /> Private challenges
+          </span>
         </CardTitle>
-        <CardDescription>
+        <CardDescription className={styles.panelDescription}>
           Intentions shared only with current circle members. Joining records participation, not
           progress. There is no ranking, and these never become public challenges.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
+        <form className={styles.formGrid} onSubmit={(event) => void submit(event)}>
           <div className="space-y-2">
             <Label htmlFor="challenge-title">Challenge</Label>
             <Input
@@ -126,28 +129,25 @@ export function CircleChallengesPanel({
         </form>
 
         {challenges.data?.challenges.length ? (
-          <ul className="space-y-2">
+          <ul className={styles.rowList}>
             {challenges.data.challenges.map((challenge) => (
-              <li
-                key={challenge.id}
-                className="rounded-md border border-border px-3 py-2 text-sm"
-              >
+              <li key={challenge.id} className={`${styles.row} flex-col items-stretch text-sm`}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium">{challenge.title}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className={styles.rowTitle}>{challenge.title}</p>
+                    <p className={styles.rowMeta}>
                       {challenge.creatorName} ·{" "}
                       {new Date(challenge.startsAt).toLocaleDateString()} –{" "}
                       {new Date(challenge.endsAt).toLocaleDateString()}
                     </p>
                     {challenge.description ? (
-                      <p className="mt-1 text-xs text-muted-foreground">{challenge.description}</p>
+                      <p className={`${styles.rowMeta} mt-1`}>{challenge.description}</p>
                     ) : null}
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className={`${styles.rowMeta} mt-1`}>
                       {challenge.participantCount} joined · no names or progress shown
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1">
+                  <div className={styles.rowActions}>
                     <Button
                       size="sm"
                       variant={challenge.viewerJoined ? "secondary" : "outline"}
@@ -195,7 +195,7 @@ export function CircleChallengesPanel({
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-muted-foreground">No private challenges yet.</p>
+          <p className={styles.empty}>No private challenges yet.</p>
         )}
       </CardContent>
     </Card>

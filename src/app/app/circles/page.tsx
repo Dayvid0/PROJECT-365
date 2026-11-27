@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Copy, ShieldCheck, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
+import styles from "@/components/trust/trust.module.css";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -65,22 +66,27 @@ export default function CirclesPage() {
   };
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Circles</h1>
-        <p className="text-sm text-muted-foreground">
-          Small, invite-only groups for compassionate accountability. Nothing is shared by joining.
-        </p>
+    <div className={styles.page}>
+      <div className={styles.pageHead}>
+        <div>
+          <span className={styles.eyebrow}>SMALL, INTENTIONAL CIRCLES</span>
+          <h1 className={styles.title}>Circles</h1>
+          <p className={styles.subtitle}>
+            Small, invite-only groups for compassionate accountability. Nothing is shared by joining.
+          </p>
+        </div>
       </div>
 
-      <Card className="border-primary/30 bg-card">
+      <Card className={styles.panelAccent}>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <ShieldCheck className="size-4 text-primary" /> Private by design
+          <CardTitle className={styles.subsectionTitle}>
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="size-4 text-primary" /> Private by design
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-xs text-muted-foreground">
+          <p className={styles.panelDescription}>
             Circles are never searchable or public. You invite people by their exact email address,
             they review what joining means before accepting, and every habit field still needs a
             separate preview and your explicit consent. Supportive reactions, replies, and private
@@ -91,12 +97,14 @@ export default function CirclesPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="size-4 text-primary" /> Create a circle
+          <CardTitle className={styles.panelTitle}>
+            <span className="flex items-center gap-2">
+              <Users className="size-4 text-primary" /> Create a circle
+            </span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className={styles.panelDescription}>
             You become the owner. Only invited members can see that the circle exists.
           </CardDescription>
         </CardHeader>
@@ -131,25 +139,24 @@ export default function CirclesPage() {
       </Card>
 
       {received.data?.invites.length ? (
-        <Card className="border-primary/30 bg-card">
+        <Card className={styles.panelAccent}>
           <CardHeader>
-            <CardTitle>Invites waiting for you</CardTitle>
-            <CardDescription>Review the circle before you decide to join.</CardDescription>
+            <CardTitle className={styles.panelTitle}>Invites waiting for you</CardTitle>
+            <CardDescription className={styles.panelDescription}>
+              Review the circle before you decide to join.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
+            <ul className={styles.rowList}>
               {received.data.invites.map((invite) => (
-                <li
-                  key={invite.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
-                >
+                <li key={invite.id} className={styles.row}>
                   <span>
                     <span className="font-medium">{invite.circleName}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
+                    <span className={styles.rowMeta}>
                       from {invite.inviterName} · expires {formatDate(invite.expiresAt)}
                     </span>
                   </span>
-                  <span className="flex gap-2">
+                  <span className={styles.rowActions}>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -168,31 +175,31 @@ export default function CirclesPage() {
         </Card>
       ) : null}
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Your circles</CardTitle>
-          <CardDescription>
+          <CardTitle className={styles.panelTitle}>Your circles</CardTitle>
+          <CardDescription className={styles.panelDescription}>
             Each circle has its own members and its own field-level grants.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {circles.data?.circles.length ? (
-            <ul className="space-y-2">
+            <ul className={styles.rowList}>
               {circles.data.circles.map((circle) => (
                 <li key={circle.id}>
                   <Link
                     href={`/app/circles/${circle.id}`}
-                    className="block rounded-md border border-border px-3 py-3 transition-colors hover:bg-muted"
+                    className={`${styles.row} block transition-colors hover:bg-muted`}
                   >
                     <span className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-semibold">{circle.name}</span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className={styles.rowMeta}>
                         {circle.role} · {circle.memberCount} member
                         {circle.memberCount === 1 ? "" : "s"}
                       </span>
                     </span>
                     {circle.description ? (
-                      <span className="mt-1 block text-xs text-muted-foreground">
+                      <span className={`${styles.rowMeta} mt-1 block`}>
                         {circle.description}
                       </span>
                     ) : null}
@@ -201,9 +208,7 @@ export default function CirclesPage() {
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-muted-foreground">
-              No circles yet. Solo tracking works fully on its own.
-            </p>
+            <p className={styles.empty}>No circles yet. Solo tracking works fully on its own.</p>
           )}
         </CardContent>
       </Card>

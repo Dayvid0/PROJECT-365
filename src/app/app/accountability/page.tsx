@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, Copy, HeartHandshake, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
+import styles from "@/components/trust/trust.module.css";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -181,22 +182,27 @@ export default function AccountabilityPage() {
   };
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Accountability</h1>
-        <p className="text-sm text-muted-foreground">
-          Private by default. Share only what you choose, with someone who accepted your invite.
-        </p>
+    <div className={styles.page}>
+      <div className={styles.pageHead}>
+        <div>
+          <span className={styles.eyebrow}>CONSENT BEFORE CONNECTION</span>
+          <h1 className={styles.title}>Accountability</h1>
+          <p className={styles.subtitle}>
+            Private by default. Share only what you choose, with someone who accepted your invite.
+          </p>
+        </div>
       </div>
 
-      <Card className="border-primary/30 bg-card">
+      <Card className={styles.panelAccent}>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <ShieldCheck className="size-4 text-primary" /> Your boundaries come first
+          <CardTitle className={styles.subsectionTitle}>
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="size-4 text-primary" /> Your boundaries come first
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-xs text-muted-foreground">
+          <p className={styles.panelDescription}>
             This accountability area has no public profile or user search. A partner is connected
             only when they accept a link you send them. Every shared field needs your explicit preview
             and confirmation, and revoking stops all future sharing. Skips and planned breaks are
@@ -205,12 +211,14 @@ export default function AccountabilityPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <HeartHandshake className="size-4 text-primary" /> Trusted partner
+          <CardTitle className={styles.panelTitle}>
+            <span className="flex items-center gap-2">
+              <HeartHandshake className="size-4 text-primary" /> Trusted partner
+            </span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className={styles.panelDescription}>
             Invite by exact email address. Your partner must sign in with that address to accept.
           </CardDescription>
         </CardHeader>
@@ -244,21 +252,18 @@ export default function AccountabilityPage() {
           </form>
 
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold">Connected partners</h3>
+            <h3 className={styles.subsectionTitle}>Connected partners</h3>
             {partnerList.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No partners yet. Solo tracking works fully on its own.</p>
+              <p className={styles.empty}>No partners yet. Solo tracking works fully on its own.</p>
             ) : (
-              <ul className="space-y-2">
+              <ul className={styles.rowList}>
                 {partnerList.map((partner) => (
-                  <li
-                    key={`${partner.userId}-${partner.direction}`}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
-                  >
-                    <span>
-                      <span className="font-medium">{partner.name}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{partner.email}</span>
+                  <li key={`${partner.userId}-${partner.direction}`} className={styles.row}>
+                    <span className={styles.rowMain}>
+                      <span className={styles.rowTitle}>{partner.name}</span>
+                      <span className={styles.rowMeta}>{partner.email}</span>
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className={styles.rowMeta}>
                       {partner.direction === "invited" ? "You invited them" : "They invited you"}
                     </span>
                   </li>
@@ -268,21 +273,18 @@ export default function AccountabilityPage() {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold">Sent invites</h3>
+            <h3 className={styles.subsectionTitle}>Sent invites</h3>
             {invites.data?.sent.length ? (
-              <ul className="space-y-2">
+              <ul className={styles.rowList}>
                 {invites.data.sent.map((invite) => (
-                  <li
-                    key={invite.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-xs"
-                  >
-                    <span>
-                      <span className="font-medium">{invite.inviteeEmail}</span>
-                      <span className="ml-2 text-muted-foreground">
+                  <li key={invite.id} className={`${styles.row} text-xs`}>
+                    <span className={styles.rowMain}>
+                      <span className={styles.rowTitle}>{invite.inviteeEmail}</span>
+                      <span className={styles.rowMeta}>
                         {invite.status} · expires {formatDate(invite.expiresAt)}
                       </span>
                     </span>
-                    <span className="flex gap-2">
+                    <span className={styles.rowActions}>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -305,22 +307,24 @@ export default function AccountabilityPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-muted-foreground">No invites sent yet.</p>
+              <p className={styles.empty}>No invites sent yet.</p>
             )}
           </div>
 
           {invites.data?.received.length ? (
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold">Invites waiting for you</h3>
-              <ul className="space-y-2">
+              <h3 className={styles.subsectionTitle}>Invites waiting for you</h3>
+              <ul className={styles.rowList}>
                 {invites.data.received.map((invite) => (
-                  <li key={invite.id} className="rounded-md border border-border px-3 py-2 text-xs">
-                    <span className="font-medium">{invite.inviterName}</span>
-                    <span className="ml-2 text-muted-foreground">
-                      invited you · expires {formatDate(invite.expiresAt)}
+                  <li key={invite.id} className={`${styles.row} text-xs`}>
+                    <span className={styles.rowMain}>
+                      <span className={styles.rowTitle}>{invite.inviterName}</span>
+                      <span className={styles.rowMeta}>
+                        invited you · expires {formatDate(invite.expiresAt)}
+                      </span>
                     </span>
                     <Link
-                      className="ml-3 font-semibold text-primary hover:underline"
+                      className="font-semibold text-primary hover:underline"
                       href={`/app/accountability/invites/${invite.token}`}
                     >
                       Review invite
@@ -333,16 +337,16 @@ export default function AccountabilityPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Share a habit</CardTitle>
-          <CardDescription>
+          <CardTitle className={styles.panelTitle}>Share a habit</CardTitle>
+          <CardDescription className={styles.panelDescription}>
             Preview the exact fields before you agree. Notes and history are never shared by
             default.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={styles.formGrid}>
             <div className="space-y-2">
               <Label htmlFor="grant-habit">Habit</Label>
               <Select value={habitId} onValueChange={setHabitId}>
@@ -382,19 +386,18 @@ export default function AccountabilityPage() {
               placeholder="A name your partner will see instead"
               onChange={(event) => setAlias(event.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className={styles.rowMeta}>
               Select “Alias instead of name” below to use it.
             </p>
           </div>
 
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">Fields they can see</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
+          <fieldset className={styles.consentBox}>
+            <legend className={styles.subsectionTitle}>Fields they can see</legend>
+            <div className={styles.consentGrid}>
               {SHARE_FIELDS.map((field) => (
-                <label key={field} className="flex items-center gap-2 text-sm">
+                <label key={field} className={styles.consentItem}>
                   <input
                     type="checkbox"
-                    className="size-4 accent-[var(--primary)]"
                     checked={fields.includes(field)}
                     onChange={() => toggleField(field)}
                   />
@@ -427,31 +430,28 @@ export default function AccountabilityPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Active sharing</CardTitle>
-          <CardDescription>Every grant can be revoked here at any time.</CardDescription>
+          <CardTitle className={styles.panelTitle}>Active sharing</CardTitle>
+          <CardDescription className={styles.panelDescription}>Every grant can be revoked here at any time.</CardDescription>
         </CardHeader>
         <CardContent>
           {grants.data?.grants.length ? (
-            <ul className="space-y-2">
+            <ul className={styles.rowList}>
               {grants.data.grants.map((grant) => {
                 const habitName = habits.find((habit) => habit.id === grant.habitId)?.name ?? "Habit";
                 const partnerName =
                   partnerList.find((partner) => partner.userId === grant.recipientId)?.name ??
                   "Partner";
                 return (
-                  <li
-                    key={grant.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
-                  >
-                    <span>
-                      <span className="font-medium">{habitName}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">
+                  <li key={grant.id} className={`${styles.row} text-sm`}>
+                    <span className={styles.rowMain}>
+                      <span className={styles.rowTitle}>{habitName}</span>
+                      <span className={styles.rowMeta}>
                         with {partnerName} · {grant.fields.map((field) => FIELD_LABELS[field]).join(", ")}
                       </span>
                       {grant.revokedAt ? (
-                        <span className="ml-2 text-xs text-muted-foreground">Revoked</span>
+                        <span className={styles.rowMeta}>Revoked</span>
                       ) : null}
                     </span>
                     {grant.revokedAt ? null : (
@@ -464,20 +464,20 @@ export default function AccountabilityPage() {
               })}
             </ul>
           ) : (
-            <p className="text-xs text-muted-foreground">Nothing is shared right now.</p>
+            <p className={styles.empty}>Nothing is shared right now.</p>
           )}
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/40 bg-card">
+      <Card className={styles.panelSafety}>
         <CardHeader>
-          <CardTitle>Safety controls</CardTitle>
-          <CardDescription>
+          <CardTitle className={styles.panelTitle}>Safety controls</CardTitle>
+          <CardDescription className={styles.panelDescription}>
             These are always available, even if you never share anything.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={styles.formGrid}>
             <div className="space-y-2">
               <Label htmlFor="control-kind">Boundary</Label>
               <Select
@@ -523,13 +523,10 @@ export default function AccountabilityPage() {
           </Button>
 
           {controls.data?.controls.length ? (
-            <ul className="space-y-2 border-t border-border pt-4">
+            <ul className={`${styles.rowList} border-t border-border pt-4`}>
               {controls.data.controls.map((control) => (
-                <li
-                  key={control.id}
-                  className="flex items-center justify-between gap-2 text-xs text-muted-foreground"
-                >
-                  <span>
+                <li key={control.id} className={`${styles.row} text-xs`}>
+                  <span className={styles.rowMeta}>
                     {control.kind}
                     {control.expiresAt ? ` · until ${formatDate(control.expiresAt)}` : ""}
                   </span>
@@ -546,8 +543,8 @@ export default function AccountabilityPage() {
           ) : null}
 
           <div className="space-y-3 border-t border-border pt-4">
-            <h3 className="text-sm font-semibold">Report a problem</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <h3 className={styles.subsectionTitle}>Report a problem</h3>
+            <div className={styles.formGrid}>
               <div className="space-y-2">
                 <Label htmlFor="report-target">Partner</Label>
                 <Select value={reportTarget} onValueChange={setReportTarget}>
@@ -605,14 +602,14 @@ export default function AccountabilityPage() {
             >
               Save report
             </Button>
-            <p className="text-xs text-muted-foreground">
+            <p className={styles.note}>
               Reports stay visible to you in your history. Allowlisted moderators can review them in
               the moderation queue; they never see your private habit records.
             </p>
             {reports.data?.reports.length ? (
-              <ul className="space-y-1 border-t border-border pt-3">
+              <ul className={`${styles.rowList} border-t border-border pt-3`}>
                 {reports.data.reports.map((report) => (
-                  <li key={report.id} className="text-xs text-muted-foreground">
+                  <li key={report.id} className={`${styles.row} text-xs`}>
                     {report.category} · {report.status} · {formatDate(report.createdAt)}
                   </li>
                 ))}
@@ -623,23 +620,23 @@ export default function AccountabilityPage() {
       </Card>
 
       <Dialog open={Boolean(preview)} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent>
+        <DialogContent className={styles.panel}>
           <DialogHeader>
-            <DialogTitle>Confirm exactly what gets shared</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className={styles.panelTitle}>Confirm exactly what gets shared</DialogTitle>
+            <DialogDescription className={styles.panelDescription}>
               {preview?.audienceLabel ?? "Partner"} · {preview?.frequencyLabel ?? ""}. Nothing else
               is included.
             </DialogDescription>
           </DialogHeader>
-          <ul className="space-y-2 text-sm">
+          <ul className={`${styles.previewList} text-sm`}>
             {preview?.fields.map((field) => (
-              <li key={field.field} className="rounded-md border border-border px-3 py-2">
-                <span className="block text-xs font-medium text-muted-foreground">{field.label}</span>
-                <span>{field.value}</span>
+              <li key={field.field} className={styles.previewRow}>
+                <span className={styles.previewLabel}>{field.label}</span>
+                <span className={styles.previewValue}>{field.value}</span>
               </li>
             ))}
           </ul>
-          <p className="text-xs text-muted-foreground">{preview?.revocationNotice}</p>
+          <p className={styles.safetyNote}>{preview?.revocationNotice}</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPreview(null)}>
               <X className="size-4" /> Not now
@@ -652,10 +649,10 @@ export default function AccountabilityPage() {
       </Dialog>
 
       <Dialog open={Boolean(revokeId)} onOpenChange={(open) => !open && setRevokeId(null)}>
-        <DialogContent>
+        <DialogContent className={styles.panel}>
           <DialogHeader>
-            <DialogTitle>Revoke this share grant?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className={styles.panelTitle}>Revoke this share grant?</DialogTitle>
+            <DialogDescription className={styles.panelDescription}>
               Future access stops immediately. Anything already seen may remain in your
               partner&apos;s history or notes, and cannot be pulled back from here.
             </DialogDescription>

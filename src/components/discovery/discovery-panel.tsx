@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { EyeOff, Flag, Plus, ShieldCheck, Sparkles } from "lucide-react";
 import { useWorkspaceUserId } from "@/components/providers/workspace-context";
+import styles from "@/components/trust/trust.module.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -120,22 +121,27 @@ export function DiscoveryPanel({ canModerate }: { canModerate: boolean }) {
   };
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Discover</h1>
-        <p className="text-sm text-muted-foreground">
-          Signed-in, opt-in challenges. No public profiles, user search, direct messages,
-          participant names, progress feeds, or rankings.
-        </p>
+    <div className={styles.page}>
+      <div className={styles.pageHead}>
+        <div>
+          <span className={styles.eyebrow}>MODERATED, NOT PUBLIC PROFILES</span>
+          <h1 className={styles.title}>Discover</h1>
+          <p className={styles.subtitle}>
+            Signed-in, opt-in challenges. No public profiles, user search, direct messages,
+            participant names, progress feeds, or rankings.
+          </p>
+        </div>
       </div>
 
-      <Card className="border-primary/30 bg-card">
+      <Card className={styles.panelAccent}>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <ShieldCheck className="size-4 text-primary" /> How public discovery works
+          <CardTitle className={styles.subsectionTitle}>
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="size-4 text-primary" /> How public discovery works
+            </span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-xs text-muted-foreground">
+        <CardContent className={`${styles.panelDescription} space-y-2`}>
           <p>
             Challenges here are separate from your habits. Joining records only that you opted in;
             it shares no habit name, check-in, note, or progress. Everyone sees the same title,
@@ -156,26 +162,28 @@ export function DiscoveryPanel({ canModerate }: { canModerate: boolean }) {
       </Card>
 
       {!configured ? (
-        <Card className="border-border bg-card">
+        <Card className={styles.panel}>
           <CardHeader>
-            <CardTitle className="text-lg">Discovery is waiting for moderation setup</CardTitle>
-            <CardDescription>
+            <CardTitle className={styles.panelTitle}>Discovery is waiting for moderation setup</CardTitle>
+            <CardDescription className={styles.panelDescription}>
               Public challenges stay hidden until reviewers and a contact address are configured.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+          <CardContent className={styles.panelDescription}>
             You can keep using private tracking and invite-only circles. No proposal is accepted
             while this gate is closed.
           </CardContent>
         </Card>
       ) : (
         <>
-          <Card className="border-border bg-card">
+          <Card className={styles.panel}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="size-4 text-primary" /> Propose a public challenge
+              <CardTitle className={styles.panelTitle}>
+                <span className="flex items-center gap-2">
+                  <Sparkles className="size-4 text-primary" /> Propose a public challenge
+                </span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className={styles.panelDescription}>
                 Review exactly what others will see before you send it for moderation.
               </CardDescription>
             </CardHeader>
@@ -236,10 +244,10 @@ export function DiscoveryPanel({ canModerate }: { canModerate: boolean }) {
                     onChange={(event) => setEndDate(event.target.value)}
                   />
                 </div>
-                <label className="flex items-start gap-2 text-xs text-muted-foreground sm:col-span-2">
+                <label className={`${styles.consentItem} items-start sm:col-span-2`}>
                   <input
                     type="checkbox"
-                    className="mt-0.5 size-4 accent-primary"
+                    className="mt-0.5 size-4"
                     checked={policyAccepted}
                     onChange={(event) => setPolicyAccepted(event.target.checked)}
                   />
@@ -257,37 +265,37 @@ export function DiscoveryPanel({ canModerate }: { canModerate: boolean }) {
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card">
+          <Card className={styles.panel}>
             <CardHeader>
-              <CardTitle>Public challenges</CardTitle>
-              <CardDescription>
+              <CardTitle className={styles.panelTitle}>Public challenges</CardTitle>
+              <CardDescription className={styles.panelDescription}>
                 Approved intentions only. Participation is opt-in and anonymous to other members.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {discovery.isPending ? (
-                <p className="text-xs text-muted-foreground">Loading challenges…</p>
+                <p className={styles.empty}>Loading challenges…</p>
               ) : discovery.isError ? (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className={styles.warning}>
                   Challenges could not be loaded. Please try again.
                 </p>
               ) : discovery.data?.challenges.length ? (
                 <ul className="space-y-3">
                   {discovery.data.challenges.map((challenge) => (
-                    <li key={challenge.id} className="rounded-md border border-border px-3 py-3">
+                    <li key={challenge.id} className={styles.row}>
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="max-w-xl space-y-1">
-                          <p className="font-medium">{challenge.title}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className={styles.rowTitle}>{challenge.title}</p>
+                          <p className={styles.rowMeta}>
                             {CATEGORY_LABELS[challenge.category]} · {formatDate(challenge.startsAt)} –{" "}
                             {formatDate(challenge.endsAt)}
                           </p>
-                          <p className="text-sm text-muted-foreground">{challenge.summary}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className={styles.panelDescription}>{challenge.summary}</p>
+                          <p className={styles.rowMeta}>
                             {challenge.participantCount} joined · no names, progress, or ranking
                           </p>
                         </div>
-                        <div className="flex flex-wrap items-center gap-1">
+                        <div className={styles.rowActions}>
                           <Button
                             size="sm"
                             variant={challenge.viewerJoined ? "secondary" : "outline"}
@@ -323,7 +331,7 @@ export function DiscoveryPanel({ canModerate }: { canModerate: boolean }) {
                       </div>
                       {reportingId === challenge.id ? (
                         <form
-                          className="mt-3 space-y-2 rounded-md border border-border bg-muted/30 p-3"
+                          className={`${styles.consentBox} mt-3 space-y-2`}
                           onSubmit={(event) => void submitReport(event, challenge.id)}
                         >
                           <Label htmlFor={`report-category-${challenge.id}`}>Reason</Label>
@@ -363,7 +371,7 @@ export function DiscoveryPanel({ canModerate }: { canModerate: boolean }) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-muted-foreground">
+                <p className={styles.empty}>
                   No approved challenges yet. You can propose one above; moderators decide what
                   becomes visible.
                 </p>
@@ -372,18 +380,18 @@ export function DiscoveryPanel({ canModerate }: { canModerate: boolean }) {
           </Card>
 
           {discovery.data?.proposals.length ? (
-            <Card className="border-border bg-card">
+            <Card className={styles.panel}>
               <CardHeader>
-                <CardTitle>Your proposals</CardTitle>
-                <CardDescription>Pending proposals are visible only to you and moderators.</CardDescription>
+                <CardTitle className={styles.panelTitle}>Your proposals</CardTitle>
+                <CardDescription className={styles.panelDescription}>Pending proposals are visible only to you and moderators.</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
                   {discovery.data.proposals.map((proposal) => (
-                    <li key={proposal.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm">
+                    <li key={proposal.id} className={`${styles.row} text-sm`}>
                       <div>
-                        <p className="font-medium">{proposal.title}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className={styles.rowTitle}>{proposal.title}</p>
+                        <p className={styles.rowMeta}>
                           <Badge variant="secondary">{proposal.status}</Badge>
                           {proposal.reviewNote ? ` · ${proposal.reviewNote}` : ""}
                         </p>
@@ -407,12 +415,12 @@ export function DiscoveryPanel({ canModerate }: { canModerate: boolean }) {
         </>
       )}
 
-      <Card className="border-border bg-card">
+      <Card className={styles.panel}>
         <CardHeader>
-          <CardTitle>Community rules and escalation</CardTitle>
-          <CardDescription>What moderators do, and what they do not do.</CardDescription>
+          <CardTitle className={styles.panelTitle}>Community rules and escalation</CardTitle>
+          <CardDescription className={styles.panelDescription}>What moderators do, and what they do not do.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
+        <CardContent className={`${styles.panelDescription} space-y-2`}>
           <p>
             Keep intentions kind, non-competitive, and age-appropriate. No shaming, pressure,
             harassment, spam, private habit details, or claims about other people&apos;s progress.
