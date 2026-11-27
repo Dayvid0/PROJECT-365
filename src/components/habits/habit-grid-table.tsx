@@ -9,7 +9,7 @@ import {
   habitCompletionRate,
   logKey,
 } from "@/domain/calculations";
-import { scheduledDatesForRange } from "@/domain/schedule";
+import { isExceptionDate, scheduledDatesForRange } from "@/domain/schedule";
 import type {
   Habit,
   HabitLog,
@@ -20,9 +20,11 @@ import type {
 import styles from "@/components/tracking/tracking.module.css";
 import { cn } from "@/lib/utils";
 
+const EXCUSED_ICON = "⚠";
+
 function statusIcon(status: HabitStatus | undefined): string {
   if (status === 1) return "✔";
-  if (status === 0.5) return "⚠";
+  if (status === 0.5) return "◐";
   if (status === 0) return "✗";
   return "–";
 }
@@ -91,6 +93,7 @@ export function HabitGridTable({
 
         {habits.map((habit) => {
           const habitLogs = logs.filter((log) => log.habitId === habit.id);
+          const habitExceptions = exceptions.filter((exception) => exception.habitId === habit.id);
           const scheduledDates = scheduledDatesForRange(
             schedules,
             exceptions,
@@ -116,20 +119,30 @@ export function HabitGridTable({
                     const date = format(day, "yyyy-MM-dd");
                     const log = getLog(habit.id, date);
                     const next = cycleStatus(log?.status);
+                    const excused = isExceptionDate(habitExceptions, date);
+                    const shownIcon = excused ? EXCUSED_ICON : statusIcon(log?.status);
+                    const label = excused
+                      ? `${habit.name} on ${format(day, "MMM d")}: excused — outside your control, not counted`
+                      : `${habit.name} on ${format(day, "MMM d")}: ${shownIcon}${scheduledSet.has(date) ? "" : " (not scheduled)"} (tap for ${statusIcon(next)})`;
                     return (
                       <button
                         key={date}
                         type="button"
+                        disabled={excused}
                         onClick={() => onCellTap(habit.id, date, next)}
-                        aria-label={`${habit.name} on ${format(day, "MMM d")}: ${statusIcon(log?.status)}${scheduledSet.has(date) ? "" : " (not scheduled)"} (tap for ${statusIcon(next)})`}
-                        title={`${format(day, "MMM d")} · ${statusIcon(log?.status)}${scheduledSet.has(date) ? "" : " · not scheduled"}`}
+                        aria-label={label}
+                        title={
+                          excused
+                            ? `${format(day, "MMM d")} · excused — outside your control, not counted`
+                            : `${format(day, "MMM d")} · ${shownIcon}${scheduledSet.has(date) ? "" : " · not scheduled"}`
+                        }
                         className={cn(
                           "tap-target m-0.5 flex items-center justify-center rounded border text-[13px] font-bold transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-ring",
                           styles.gridCell,
-                          statusTone(log?.status)
+                          excused ? styles.gridExcused : statusTone(log?.status)
                         )}
                       >
-                        {statusIcon(log?.status)}
+                        {shownIcon}
                       </button>
                     );
                   })}

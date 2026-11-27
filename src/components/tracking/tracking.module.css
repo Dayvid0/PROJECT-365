@@ -210,6 +210,12 @@
   color: var(--color-nolog);
 }
 
+.swatchExcused {
+  background: var(--accent);
+  border: 1px dashed color-mix(in oklab, var(--color-nolog) 55%, var(--border));
+  color: var(--color-nolog);
+}
+
 .gridFrame {
   border-color: var(--border);
   background: var(--card);
@@ -270,6 +276,19 @@
   border-color: var(--border);
   background: transparent;
   color: var(--color-nolog);
+}
+
+.gridExcused {
+  border-color: color-mix(in oklab, var(--color-nolog) 55%, var(--border));
+  border-style: dashed;
+  background: var(--accent);
+  color: var(--color-nolog);
+  cursor: not-allowed;
+}
+
+.gridExcused:hover {
+  filter: none;
+  transform: none;
 }
 
 .row {

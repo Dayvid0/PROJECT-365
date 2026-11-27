@@ -22,8 +22,9 @@ import { cn } from "@/lib/utils";
 
 const LEGEND = [
   { icon: "✔", label: "Done", tone: styles.swatchDone },
-  { icon: "⚠", label: "Partial", tone: styles.swatchPartial },
+  { icon: "◐", label: "Partial", tone: styles.swatchPartial },
   { icon: "✗", label: "Missed", tone: styles.swatchMissed },
+  { icon: "⚠", label: "Excused — not counted", tone: styles.swatchExcused },
   { icon: "–", label: "No log", tone: styles.swatchNone },
 ] as const;
 
@@ -51,7 +52,8 @@ export default function GridPage() {
           <h1 className={styles.title}>Habit grid</h1>
           <p className={styles.subtitle}>
             Every square is a real day; filled squares come from saved check-ins. Tap a cell to
-            cycle: done → partial → missed → done.
+            cycle: done → partial → missed → done. Excused days marked ⚠ are outside your control
+            and are not counted.
           </p>
         </div>
         <div className={styles.actions}>
